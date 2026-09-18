@@ -34,8 +34,11 @@ def fetch_metadata(client: SerpClient, videos: list[VideoInfo]) -> list[VideoInf
             if publish_date:
                 video.publish_date = publish_date
 
-            # Extract description
+            # Extract description — sometimes a plain string, sometimes
+            # {"content": "...", "link": "..."} depending on the response.
             description = info.get("description", "")
+            if isinstance(description, dict):
+                description = description.get("content", "")
             if description:
                 video.description = description
 

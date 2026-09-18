@@ -16,6 +16,12 @@ from rapidfuzz import fuzz
 
 from hisaab.llm import call_llm_json
 from hisaab.models import ExtractedTip, TranscriptWindow, VerifiedTip
+from hisaab.pipeline.extract import (
+    _DIRECTION_SYNONYMS,
+    _HORIZON_SYNONYMS,
+    _INSTRUMENT_SYNONYMS,
+    _normalize_enum,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -77,9 +83,17 @@ def verify_tips(
             corrections = llm_result.get("corrections", {})
             tip_dict = tip.model_dump()
             tip_dict.update(corrections)
-            vtip = VerifiedTip(
-                **tip_dict, verification_notes=str(corrections) if corrections else ""
-            )
+            _renormalize_enums(tip_dict)
+            try:
+                vtip = VerifiedTip(
+                    **tip_dict, verification_notes=str(corrections) if corrections else ""
+                )
+            except Exception as e:
+                # An LLM correction can still produce an invalid combination
+                # (e.g. a bad enum) — don't let one bad tip kill the whole run.
+                logger.warning(f"Dropping tip after invalid correction: {e}")
+                dropped_llm += 1
+                continue
         else:
             vtip = VerifiedTip(**tip.model_dump())
 
@@ -90,6 +104,19 @@ def verify_tips(
         f"{dropped_fuzzy} dropped (fuzzy), {dropped_llm} dropped (LLM)"
     )
     return verified
+
+
+def _renormalize_enums(tip_dict: dict) -> None:
+    """Re-apply enum synonym coercion after LLM corrections are merged in."""
+    tip_dict["direction"] = _normalize_enum(
+        tip_dict.get("direction"), _DIRECTION_SYNONYMS, "LONG"
+    )
+    tip_dict["instrument_type"] = _normalize_enum(
+        tip_dict.get("instrument_type"), _INSTRUMENT_SYNONYMS, "EQUITY"
+    )
+    tip_dict["horizon_bucket"] = _normalize_enum(
+        tip_dict.get("horizon_bucket"), _HORIZON_SYNONYMS, "UNSPECIFIED"
+    )
 
 
 def merge_duplicates(tips: list[VerifiedTip]) -> list[VerifiedTip]:

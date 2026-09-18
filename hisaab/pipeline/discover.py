@@ -138,12 +138,16 @@ def discover_single_video(client: SerpClient, video_id: str) -> tuple[ChannelInf
         channel_id=channel_id,
         channel_title=channel_title,
     )
+    description = info.get("description", "")
+    if isinstance(description, dict):
+        description = description.get("content", "")
+
     video = VideoInfo(
         video_id=video_id,
         title=info.get("title", ""),
         channel_id=channel_id,
         channel_title=channel_title,
-        description=info.get("description", ""),
+        description=description,
     )
     return channel_info, [video]
 

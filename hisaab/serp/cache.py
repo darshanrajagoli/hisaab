@@ -104,6 +104,21 @@ class SerpCache:
         rows = self._conn.execute("SELECT engine, COUNT(*) FROM cache GROUP BY engine").fetchall()
         return dict(rows)
 
+    def count_calls_since(self, since_ts: float) -> int:
+        """
+        Count real API calls (cache rows) created at or after a timestamp.
+
+        Each row is written exactly once, at the moment of the real SerpApi
+        call that produced it — a later cache hit reads the row but never
+        rewrites `created_at`. So this is an accurate count of net-new calls
+        made since `since_ts`, e.g. the start of the current month, and lets
+        the monthly budget survive across separate CLI/Streamlit process runs.
+        """
+        row = self._conn.execute(
+            "SELECT COUNT(*) FROM cache WHERE created_at >= ?", (since_ts,)
+        ).fetchone()
+        return row[0] if row else 0
+
     def close(self) -> None:
         if self._conn:
             self._conn.close()

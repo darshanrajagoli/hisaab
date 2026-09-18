@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import os
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 from serpapi import GoogleSearch
@@ -18,6 +19,12 @@ from hisaab.serp.cache import SerpCache, _make_cache_key
 from hisaab.serp.fixtures import FixtureStore
 
 logger = logging.getLogger(__name__)
+
+
+def _start_of_month() -> float:
+    """Unix timestamp for the start of the current UTC month."""
+    now = datetime.now(timezone.utc)
+    return now.replace(day=1, hour=0, minute=0, second=0, microsecond=0).timestamp()
 
 
 class SerpApiError(Exception):
@@ -49,8 +56,16 @@ class SerpClient:
         self.mode = mode or os.getenv("HISAAB_MODE", "live")
         self.api_key = api_key or os.getenv("SERPAPI_API_KEY", "")
         self.cache = cache or SerpCache()
-        self.budget = budget or BudgetGovernor()
         self.fixtures = fixtures or FixtureStore()
+
+        if budget is not None:
+            self.budget = budget
+        else:
+            self.budget = BudgetGovernor()
+            # Restore the monthly count from the cache DB so the free-tier
+            # cap is enforced across separate process runs, not just within
+            # one CLI invocation (see SerpCache.count_calls_since).
+            self.budget.monthly_used = self.cache.count_calls_since(_start_of_month())
 
         if self.mode == "live" and not self.api_key:
             raise ValueError(
