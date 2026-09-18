@@ -116,19 +116,7 @@ def _parse_price_series(result: dict) -> Optional[pd.DataFrame]:
             continue
 
         try:
-            if isinstance(date_str, str):
-                # Handle various date formats
-                for fmt in ["%b %d, %Y", "%Y-%m-%d", "%d %b %Y", "%m/%d/%Y"]:
-                    try:
-                        dt = pd.Timestamp(date_str)
-                        break
-                    except Exception:
-                        continue
-                else:
-                    dt = pd.Timestamp(date_str)
-            else:
-                dt = pd.Timestamp(date_str)
-
+            dt = pd.Timestamp(date_str)
             records.append({"date": dt.date(), "close": price})
         except Exception:
             continue

@@ -28,7 +28,7 @@ jobs:
 
       - name: Lint with ruff
         run: |
-          ruff check hisaab/ tests/
+          ruff check hisaab/ tests/ app/ scripts/
 
       - name: Run tests (replay mode, no API keys needed)
         env:

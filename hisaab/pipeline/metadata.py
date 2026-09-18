@@ -101,9 +101,14 @@ def _extract_publish_date(info: dict) -> Optional[date]:
     return None
 
 
+_DATE_PREFIX_RE = re.compile(
+    r"^(premiered|streamed live on|scheduled for|live)\s+", re.IGNORECASE
+)
+
+
 def _parse_date_str(date_str: str) -> Optional[date]:
     """Parse various date formats."""
-    date_str = date_str.strip()
+    date_str = _DATE_PREFIX_RE.sub("", date_str.strip())
 
     # Relative dates (fallback — imprecise)
     relative_match = re.match(r"(\d+)\s+(day|week|month|year)s?\s+ago", date_str, re.IGNORECASE)

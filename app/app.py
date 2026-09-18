@@ -70,8 +70,8 @@ if page == "🏠 Home":
 
     with col2:
         st.markdown("### 💰 API Budget")
-        from hisaab.serp.client import SerpClient
         from hisaab.serp.budget import BudgetGovernor
+        from hisaab.serp.client import SerpClient
 
         budget = BudgetGovernor()
         st.metric("Monthly Remaining", f"{budget.remaining_monthly()}")
@@ -91,8 +91,8 @@ if page == "🏠 Home":
             st.error(f"Configuration error: {e}")
             st.stop()
 
-        from hisaab.store import HisaabStore
         from hisaab.pipeline.orchestrator import run_audit
+        from hisaab.store import HisaabStore
 
         store = HisaabStore()
 
@@ -177,11 +177,11 @@ elif page == "📊 Scorecard":
         st.metric("Scored Tips", stats.total_scored)
     with col2:
         if stats.hit_rate_market is not None:
-            st.metric(
-                "Hit Rate (vs NIFTY)",
-                f"{stats.hit_rate_market:.1%}",
-                help=f"95% CI: [{stats.hit_rate_market_ci_low:.1%}, {stats.hit_rate_market_ci_high:.1%}]",
+            ci_help = (
+                f"95% CI: [{stats.hit_rate_market_ci_low:.1%}, "
+                f"{stats.hit_rate_market_ci_high:.1%}]"
             )
+            st.metric("Hit Rate (vs NIFTY)", f"{stats.hit_rate_market:.1%}", help=ci_help)
     with col3:
         if stats.mean_excess_return is not None:
             st.metric(
@@ -242,17 +242,19 @@ elif page == "📊 Scorecard":
     # Tips table
     st.subheader("All Tips")
     import pandas as pd
-    from hisaab.models import TipOutcome
+
 
     scored = [t for t in run.tips if t.is_scored]
     if scored:
         rows = []
         for tip in sorted(scored, key=lambda t: t.entry_date or ""):
+            quote = tip.quote_english
+            quote_display = quote[:60] + "..." if len(quote) > 60 else quote
             rows.append({
                 "Date": str(tip.entry_date) if tip.entry_date else "—",
                 "Stock": tip.ticker or tip.company_name_raw,
                 "Direction": tip.direction.value,
-                "Quote": tip.quote_english[:60] + "..." if len(tip.quote_english) > 60 else tip.quote_english,
+                "Quote": quote_display,
                 "Target": f"₹{tip.stated_target:,.0f}" if tip.stated_target else "—",
                 "Stop Loss": f"₹{tip.stated_stop_loss:,.0f}" if tip.stated_stop_loss else "—",
                 "Outcome": tip.outcome.value if tip.outcome else "—",
@@ -295,10 +297,13 @@ elif page == "🔍 Tip Detail":
 
     # Tip selector
     tip_labels = [
-        f"{t.ticker or t.company_name_raw} — {t.direction.value} — {t.outcome.value if t.outcome else '?'}"
+        f"{t.ticker or t.company_name_raw} — {t.direction.value} — "
+        f"{t.outcome.value if t.outcome else '?'}"
         for t in scored_tips
     ]
-    selected_idx = st.selectbox("Select tip", range(len(tip_labels)), format_func=lambda i: tip_labels[i])
+    selected_idx = st.selectbox(
+        "Select tip", range(len(tip_labels)), format_func=lambda i: tip_labels[i]
+    )
     tip = scored_tips[selected_idx]
 
     col1, col2 = st.columns([1, 1])
@@ -308,7 +313,8 @@ elif page == "🔍 Tip Detail":
         start_seconds = tip.start_ms // 1000
         yt_url = f"https://www.youtube.com/embed/{tip.video_id}?start={start_seconds}&autoplay=0"
         st.markdown(
-            f'<iframe width="100%" height="315" src="{yt_url}" frameborder="0" allowfullscreen></iframe>',
+            f'<iframe width="100%" height="315" src="{yt_url}" '
+            'frameborder="0" allowfullscreen></iframe>',
             unsafe_allow_html=True,
         )
         st.caption(f"Jump to {start_seconds // 60}:{start_seconds % 60:02d}")
@@ -332,7 +338,8 @@ elif page == "🔍 Tip Detail":
         with mc2:
             st.metric("Exit", f"₹{tip.exit_price:,.0f}" if tip.exit_price else "—")
         with mc3:
-            st.metric("Excess Return", f"{tip.excess_return:+.1%}" if tip.excess_return is not None else "—")
+            excess_str = f"{tip.excess_return:+.1%}" if tip.excess_return is not None else "—"
+            st.metric("Excess Return", excess_str)
 
         # Price chart — the actual daily close path, not just entry/exit dots.
         # Pulled live from Google Finance (a cache hit if this ticker was

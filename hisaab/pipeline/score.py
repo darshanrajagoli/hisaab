@@ -189,11 +189,25 @@ def _get_horizon_days(tip: ResolvedTip) -> int:
 def _add_trading_days(start: date, trading_days: int, series: pd.DataFrame) -> date:
     """
     Add N trading days to a start date using the price series as the calendar.
-    Falls back to calendar days × 1.5 if series doesn't extend far enough.
+
+    Google Finance returns coarser bars for longer windows (daily for 1Y,
+    weekly for 5Y) — the series row count is NOT always one row per trading
+    day. Counting `trading_days` raw rows on a weekly series would silently
+    turn a 60-trading-day (~3 month) horizon into ~60 weeks (~14 months).
+    Infer the series' own bar spacing and scale the row count accordingly.
     """
     future = series[series["date"] > start].sort_values("date")
-    if len(future) >= trading_days:
-        return future.iloc[trading_days - 1]["date"]
+    if future.empty:
+        return start + timedelta(days=int(trading_days * 1.5))
+
+    calendar_days_needed = trading_days * 7.0 / 5.0  # ~5 trading days/week
+    bars_needed = trading_days
+    if len(future) >= 2:
+        median_gap_days = future["date"].diff().dt.days.dropna().median()
+        if median_gap_days and median_gap_days > 0:
+            bars_needed = max(1, round(calendar_days_needed / median_gap_days))
+    if len(future) >= bars_needed:
+        return future.iloc[bars_needed - 1]["date"]
     # Fallback: approximate with calendar days
     return start + timedelta(days=int(trading_days * 1.5))
 
