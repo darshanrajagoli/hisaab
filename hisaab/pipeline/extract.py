@@ -46,6 +46,9 @@ def _normalize_enum(value, synonyms: dict[str, str], default: str) -> str:
     if not value:
         return default
     value = str(value).strip().upper().replace(" ", "_")
+    # The LLM occasionally echoes a Python-style enum repr, e.g. "Direction.LONG".
+    if "." in value:
+        value = value.rsplit(".", 1)[-1]
     return synonyms.get(value, value)
 
 

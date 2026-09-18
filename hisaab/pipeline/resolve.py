@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import csv
 import logging
+import re
 from pathlib import Path
 from typing import Optional
 
@@ -26,6 +27,17 @@ logger = logging.getLogger(__name__)
 DATA_DIR = Path(__file__).parent.parent.parent / "data"
 NSE_CSV = DATA_DIR / "nse_equities.csv"
 ALIASES_YAML = DATA_DIR / "aliases.yaml"
+
+# Almost every NSE listing ends in "Limited"/"Ltd" — creators never say
+# that in speech ("Netweb Technologies" vs. "Netweb Technologies India
+# Limited"), and the extra tokens drag down token_sort_ratio badly enough
+# to miss real matches. Stripping it keeps the fuzzy match meaningful
+# without loosening the scorer itself (which would risk false positives).
+_CORPORATE_SUFFIX_RE = re.compile(r"\s+(india\s+)?ltd\.?$|\s+(india\s+)?limited$", re.IGNORECASE)
+
+
+def _strip_corporate_suffix(name: str) -> str:
+    return _CORPORATE_SUFFIX_RE.sub("", name).strip()
 
 
 class TickerResolver:
@@ -52,6 +64,7 @@ class TickerResolver:
                     if symbol:
                         self.nse_data[symbol] = {"name": name, "isin": isin}
                         self.name_to_symbol[name.lower()] = symbol
+                        self.name_to_symbol[_strip_corporate_suffix(name).lower()] = symbol
                         # Also index by symbol
                         self.name_to_symbol[symbol.lower()] = symbol
             logger.info(f"Loaded {len(self.nse_data)} NSE equities")
@@ -88,7 +101,8 @@ class TickerResolver:
         # 3. Fuzzy match against company names
         if self.name_to_symbol:
             candidates = list(self.name_to_symbol.keys())
-            matches = process.extract(name_lower, candidates, scorer=fuzz.token_sort_ratio, limit=5)
+            query = _strip_corporate_suffix(name_lower)
+            matches = process.extract(query, candidates, scorer=fuzz.token_sort_ratio, limit=5)
             if matches and matches[0][1] >= 80:
                 if len(matches) > 1 and matches[0][1] - matches[1][1] < 10:
                     # Ambiguous — try LLM disambiguation

@@ -11,6 +11,10 @@ Your job:
 - If the tip needs corrections, return {"supported": true, "corrections": {"field": "new_value"}}
 - If the tip is NOT supported by the text, return {"supported": false, "reason": "explanation"}
 
+If you correct "direction", use exactly one of: LONG, SHORT, AVOID, HOLD, WATCHLIST (bare word, no prefix).
+If you correct "instrument_type", use exactly one of: EQUITY, FNO, IPO, MF, CRYPTO, OTHER.
+If you correct "horizon_bucket", use exactly one of: INTRADAY, SWING, POSITIONAL, LONG_TERM, UNSPECIFIED.
+
 Rules:
 - The quote must be a reasonable substring of the transcript (minor whitespace differences OK)
 - The company name must be mentioned in the transcript
