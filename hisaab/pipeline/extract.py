@@ -33,11 +33,15 @@ _INSTRUMENT_SYNONYMS = {
     "FUTURES": "FNO",
     "STOCK": "EQUITY",
     "SHARE": "EQUITY",
+    "ETF": "OTHER",
+    "CASH": "EQUITY",
 }
 _HORIZON_SYNONYMS = {
     "SHORT_TERM": "SWING",
     "MEDIUM_TERM": "POSITIONAL",
     "LONG": "LONG_TERM",
+    "UNKNOWN": "UNSPECIFIED",
+    "NONE": "UNSPECIFIED",
 }
 
 
