@@ -110,6 +110,12 @@ def call_llm(
     if cached is not None:
         return cached
 
+    if os.getenv("HISAAB_MODE") == "replay":
+        raise RuntimeError(
+            "Replay mode: no cached LLM response for this prompt and no live "
+            "calls are allowed. The demo fixture bundle is incomplete for this input."
+        )
+
     client = get_client()
     config = types.GenerateContentConfig(
         max_output_tokens=max_tokens,
