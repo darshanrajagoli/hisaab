@@ -334,16 +334,61 @@ elif page == "🔍 Tip Detail":
         with mc3:
             st.metric("Excess Return", f"{tip.excess_return:+.1%}" if tip.excess_return is not None else "—")
 
-        # Price chart
-        if tip.entry_price and tip.exit_price:
+        # Price chart — the actual daily close path, not just entry/exit dots.
+        # Pulled live from Google Finance (a cache hit if this ticker was
+        # already fetched during the audit, so this costs nothing extra).
+        if tip.entry_price and tip.exit_price and tip.ticker:
             import plotly.graph_objects as go
+
+            from hisaab.pipeline.prices import _parse_price_series
+            from hisaab.serp.client import SerpClient
+
+            series = None
+            try:
+                price_client = SerpClient(mode=os.environ.get("HISAAB_MODE", "live"))
+                result = price_client.search_google_finance(f"{tip.ticker}:NSE", window="6M")
+                series = _parse_price_series(result)
+            except Exception:
+                series = None
 
             fig = go.Figure()
 
-            # Entry and exit markers
-            dates = [str(tip.entry_date), str(tip.exit_date)]
-            prices = [tip.entry_price, tip.exit_price]
-            fig.add_trace(go.Scatter(x=dates, y=prices, mode="lines+markers", name="Price"))
+            if series is not None and not series.empty and tip.entry_date and tip.exit_date:
+                window = series[
+                    (series["date"] >= tip.entry_date) & (series["date"] <= tip.exit_date)
+                ]
+                if not window.empty:
+                    fig.add_trace(
+                        go.Scatter(
+                            x=window["date"],
+                            y=window["close"],
+                            mode="lines",
+                            name=f"{tip.ticker} close",
+                            line=dict(color="#2196F3", width=2),
+                        )
+                    )
+                else:
+                    series = None  # fall through to the 2-point fallback below
+
+            if series is None or series.empty:
+                # Fallback: at least show the entry → exit move.
+                dates = [str(tip.entry_date), str(tip.exit_date)]
+                prices = [tip.entry_price, tip.exit_price]
+                fig.add_trace(go.Scatter(x=dates, y=prices, mode="lines+markers", name="Price"))
+
+            # Entry/exit markers
+            fig.add_trace(
+                go.Scatter(
+                    x=[tip.entry_date, tip.exit_date],
+                    y=[tip.entry_price, tip.exit_price],
+                    mode="markers+text",
+                    text=["Entry", "Exit"],
+                    textposition="top center",
+                    marker=dict(size=10, color=["#4CAF50", "#F44336"]),
+                    name="Entry/Exit",
+                    showlegend=False,
+                )
+            )
 
             # Target line
             if tip.stated_target:
@@ -359,10 +404,10 @@ elif page == "🔍 Tip Detail":
                 )
 
             fig.update_layout(
-                title=f"{tip.ticker}: {tip.direction.value}",
+                title=f"{tip.ticker}: {tip.direction.value} — {tip.entry_date} to {tip.exit_date}",
                 yaxis_title="Price (₹)",
                 template="plotly_white",
-                height=300,
+                height=350,
             )
             st.plotly_chart(fig, use_container_width=True)
 
