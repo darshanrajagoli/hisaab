@@ -22,6 +22,18 @@ from google.genai import types
 
 logger = logging.getLogger(__name__)
 
+
+class ReplayFixtureMissing(RuntimeError):
+    """Raised in replay mode when no cached LLM response covers a prompt.
+
+    Deliberately NOT a subclass of a broadly-caught error type on its own —
+    pipeline steps must catch this specifically and re-raise it rather than
+    letting a generic `except Exception` swallow it into a silent empty
+    result (that's what made a broken replay bundle look like "0 tips
+    extracted" instead of a loud, obvious failure).
+    """
+
+
 # Gemini's free tier caps at 500 requests/DAY total (all endpoints share the
 # quota). Re-running an audit re-extracts every window from scratch unless
 # responses are cached, which burns through the daily cap on repeat runs of
@@ -111,7 +123,7 @@ def call_llm(
         return cached
 
     if os.getenv("HISAAB_MODE") == "replay":
-        raise RuntimeError(
+        raise ReplayFixtureMissing(
             "Replay mode: no cached LLM response for this prompt and no live "
             "calls are allowed. The demo fixture bundle is incomplete for this input."
         )

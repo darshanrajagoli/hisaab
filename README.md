@@ -81,7 +81,7 @@ SerpApi is the **backbone** of Hisaab. Without it, there is no transcript, no ti
 | `google_finance` | `q` (ticker:NSE), `window`, `gl=in` | `graph[]` (price, date, volume), `summary` | Price history to score every tip. One call per unique ticker, not per tip. | ~1 per unique ticker + 1 for NIFTY |
 | `google_news` | `q` (company name + "stock"), `gl=in` | `news_results[]` (title, source, link, date) | Explains the top wins and losses — turns numbers into stories | ~3–6 |
 
-Every field mapping above was verified against real, live SerpApi responses during development — not assumed from docs. See commit history for the specific mismatches this caught (e.g. `youtube_channel`'s video list actually lives in `search_results` filtered by type, not a `videos` key; transcript snippets carry no end time and had to be derived from the next snippet's start).
+Every field mapping above was verified against real, live SerpApi responses during development — not assumed from docs. See commit history for the specific mismatches this caught (e.g. `youtube_channel`'s video list actually lives in `search_results` filtered by type, not a `videos` key; transcript `start_ms` is already in milliseconds, not seconds as first assumed).
 
 ### Caching & Budget
 
@@ -173,9 +173,12 @@ The entry price is the closing price on the **first trading day strictly after**
 If the creator stated a specific entry price, the tip only counts as "triggered" if the close reaches that entry within 5 trading days. Otherwise: `NOT_TRIGGERED`.
 
 ### Horizon Rule
-| Stated Horizon | Trading Days |
+The horizon is a fixed default per bucket, not a free-text parse of the
+creator's exact words (e.g. "3 months") — the LLM extracts that phrase as
+`stated_horizon_text` for display/audit, but scoring uses the bucket default:
+
+| Horizon Bucket | Trading Days |
 |---------------|-------------|
-| Creator's own timeframe | As stated |
 | Swing | 10 |
 | Positional | 60 |
 | Long-term | 250 |
@@ -197,7 +200,7 @@ Only closing prices are used — intraday touches not counted.
 ### Statistical Analysis
 - **Hit Rate**: Wilson 95% confidence interval
 - **Mean Excess Return**: Bootstrap 95% CI (10,000 resamples, fixed seed)
-- **Significance**: One-sided binomial test against 50% coin flip
+- **Significance**: Two-sided binomial test against 50% coin flip
 - **₹10,000/tip Simulation**: Equal-weight portfolio vs NIFTY over same dates
 - **Conviction Analysis**: Hit rate for "guaranteed"/"multibagger" calls vs regular
 

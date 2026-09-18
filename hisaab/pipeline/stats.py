@@ -180,14 +180,14 @@ def bootstrap_ci(
 
 def binomial_test(successes: int, n: int, p0: float = 0.5) -> float:
     """
-    One-sided binomial test: is the hit rate significantly different from p0?
+    Two-sided binomial test: is the hit rate significantly different from p0
+    in either direction (better OR worse than a coin flip)?
 
     Returns p-value.
     """
     if n == 0:
         return 1.0
 
-    # Two-sided test
     result = sp_stats.binomtest(successes, n, p0, alternative="two-sided")
     return float(result.pvalue)
 

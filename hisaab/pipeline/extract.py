@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from hisaab.llm import call_llm_json
+from hisaab.llm import ReplayFixtureMissing, call_llm_json
 from hisaab.models import ExtractedTip, TranscriptWindow
 
 logger = logging.getLogger(__name__)
@@ -100,6 +100,8 @@ Extract all actionable stock tips. Return a JSON array."""
 
     try:
         raw = call_llm_json(prompt, system=system, max_tokens=2048)
+    except ReplayFixtureMissing:
+        raise
     except Exception as e:
         logger.warning(f"Extraction failed for {window.video_id}@{window.start_ms}: {e}")
         return []

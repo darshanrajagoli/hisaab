@@ -3,9 +3,11 @@ Step 10: Ticker resolution.
 
 Maps company names from transcripts to NSE ticker symbols using:
 1. Static aliases (hand-maintained, includes Hindi names)
-2. Fuzzy match against NSE equity list
-3. LLM disambiguation for ambiguous cases
-4. Google Finance validation (also fetches prices)
+2. Exact name/symbol match against the NSE equity list
+3. Fuzzy match against the NSE equity list
+4. LLM disambiguation for ambiguous fuzzy matches
+
+Price data is fetched separately in hisaab.pipeline.prices, after resolution.
 """
 
 from __future__ import annotations
@@ -185,6 +187,7 @@ def resolve_tips(
             rtip.ticker = result["symbol"]
             rtip.ticker_nse = result["nse_ticker"]
             rtip.isin = result["isin"]
+            rtip.company_name = result["company_name"]
             rtip.resolved = True
             rtip.resolution_method = result["method"]
             logger.debug(

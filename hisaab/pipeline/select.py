@@ -1,8 +1,8 @@
 """
 Step 4: Video selection.
 
-Classify titles to find likely-tip videos, then rank and select
-the top N within the run budget. Prefers videos old enough to grade.
+Classify titles to find likely-tip videos, then take the top N (in
+discovery order) within the run budget.
 """
 
 from __future__ import annotations
@@ -14,9 +14,6 @@ from hisaab.models import VideoInfo
 
 logger = logging.getLogger(__name__)
 
-# Minimum days old for a tip to have a gradeable outcome
-MIN_DAYS_OLD = 14
-
 
 def select_videos(
     videos: list[VideoInfo],
@@ -24,12 +21,11 @@ def select_videos(
     use_llm: bool = True,
 ) -> list[VideoInfo]:
     """
-    Select the best videos to audit.
+    Select videos to audit.
 
     1. Classify titles (LLM or heuristic)
     2. Filter to likely-tip videos
-    3. Rank by likelihood and recency
-    4. Return top N
+    3. Return the first N, in the order they were discovered
     """
     if not videos:
         return []

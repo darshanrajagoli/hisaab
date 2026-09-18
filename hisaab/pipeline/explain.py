@@ -65,12 +65,20 @@ def _fetch_explanation(
     if not tip.ticker:
         return ("", "")
 
-    # Build query
-    company_name = tip.company_name_raw or tip.ticker
+    # Use the resolved official name, not the raw ASR text — creator speech
+    # ("Netw Technologes") searched verbatim pulls unrelated news for
+    # similarly-spelled companies.
+    company_name = tip.company_name or tip.company_name_raw or tip.ticker
     query = f"{company_name} stock"
 
     try:
-        result = client.search_google_news(query)
+        news_kwargs = {}
+        if tip.entry_date and tip.exit_date:
+            news_kwargs["tbs"] = (
+                f"cdr:1,cd_min:{tip.entry_date.strftime('%m/%d/%Y')},"
+                f"cd_max:{tip.exit_date.strftime('%m/%d/%Y')}"
+            )
+        result = client.search_google_news(query, **news_kwargs)
     except Exception as e:
         logger.debug(f"News fetch failed for {tip.ticker}: {e}")
         return ("", "")

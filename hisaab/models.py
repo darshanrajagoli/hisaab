@@ -165,6 +165,7 @@ class ResolvedTip(VerifiedTip):
     ticker: Optional[str] = None  # e.g. "RELIANCE"
     ticker_nse: Optional[str] = None  # e.g. "RELIANCE:NSE"
     isin: Optional[str] = None
+    company_name: str = ""  # official NSE name, e.g. "Reliance Industries Limited"
     resolved: bool = False
     resolution_method: str = ""  # alias, fuzzy, llm, google_finance
     # Set by detect_corporate_actions(), which runs before scoring.

@@ -71,24 +71,25 @@ def _try_fetch(
             text = (item.get("snippet") or item.get("text") or "").strip()
             if not text:
                 continue
-            start_ms = _to_ms(item.get("start_ms", item.get("start", 0)))
-            raw_items.append((start_ms, text))
+            start_ms = int(item.get("start_ms", item.get("start", 0)) or 0)
+            end_ms = item.get("end_ms")
+            raw_items.append((start_ms, end_ms, text))
 
         if not raw_items:
             return None
 
-        raw_items.sort(key=lambda pair: pair[0])
+        raw_items.sort(key=lambda triple: triple[0])
 
-        # The API gives only a start time per snippet, no duration — derive
-        # each snippet's end from the next one's start (last snippet gets a
-        # 4s default tail).
+        # The API supplies end_ms directly. Only derive it from the next
+        # snippet's start (or a 4s tail for the last one) if it's missing.
         snippets = []
-        for idx, (start_ms, text) in enumerate(raw_items):
-            if idx + 1 < len(raw_items):
-                end_ms = raw_items[idx + 1][0]
-            else:
-                end_ms = start_ms + 4000
-            snippets.append(TranscriptSnippet(text=text, start_ms=start_ms, end_ms=end_ms))
+        for idx, (start_ms, end_ms, text) in enumerate(raw_items):
+            if end_ms is None:
+                if idx + 1 < len(raw_items):
+                    end_ms = raw_items[idx + 1][0]
+                else:
+                    end_ms = start_ms + 4000
+            snippets.append(TranscriptSnippet(text=text, start_ms=start_ms, end_ms=int(end_ms)))
 
         logger.debug(
             f"Transcript for {video_id}: {len(snippets)} snippets (lang={language_code})"
@@ -98,23 +99,6 @@ def _try_fetch(
     except Exception as e:
         logger.debug(f"Transcript fetch failed for {video_id} (lang={language_code}): {e}")
         return None
-
-
-def _to_ms(value) -> int:
-    """Convert a time value to milliseconds."""
-    if value is None:
-        return 0
-    if isinstance(value, str):
-        try:
-            value = float(value)
-        except ValueError:
-            return 0
-    # If value looks like seconds (< 100000), convert to ms
-    if isinstance(value, (int, float)):
-        if value < 100000:
-            return int(value * 1000)
-        return int(value)
-    return 0
 
 
 def fetch_all_transcripts(

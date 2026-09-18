@@ -14,7 +14,7 @@ from pathlib import Path
 
 from rapidfuzz import fuzz
 
-from hisaab.llm import call_llm_json
+from hisaab.llm import ReplayFixtureMissing, call_llm_json
 from hisaab.models import ExtractedTip, TranscriptWindow, VerifiedTip
 from hisaab.pipeline.extract import (
     _DIRECTION_SYNONYMS,
@@ -43,14 +43,11 @@ def verify_tips(
     window_lookup: dict[tuple[str, int], str] = {}
     for w in windows:
         window_lookup[(w.video_id, w.start_ms)] = w.text
-        # Also index nearby windows (overlap means exact match may differ)
-        for other_w in windows:
-            if other_w.video_id == w.video_id:
-                window_lookup[(other_w.video_id, other_w.start_ms)] = other_w.text
 
     verified: list[VerifiedTip] = []
     dropped_fuzzy = 0
     dropped_llm = 0
+    llm_skipped = 0
 
     for tip in tips:
         # Find the matching window text
@@ -71,6 +68,8 @@ def verify_tips(
         # Layer 2: LLM verification (optional)
         if use_llm_verify:
             llm_result = _llm_verify(tip, window_text)
+            if llm_result.get("llm_verify_skipped"):
+                llm_skipped += 1
             if not llm_result.get("supported", False):
                 logger.debug(
                     f"LLM verification failed for {tip.company_name_raw}: "
@@ -102,6 +101,7 @@ def verify_tips(
     logger.info(
         f"Verification: {len(verified)} passed, "
         f"{dropped_fuzzy} dropped (fuzzy), {dropped_llm} dropped (LLM)"
+        + (f", {llm_skipped} LLM checks skipped due to errors" if llm_skipped else "")
     )
     return verified
 
@@ -218,6 +218,12 @@ Is this tip supported by the transcript? Return JSON."""
             model="gemini-3.1-flash-lite",
             max_tokens=512,
         )
+    except ReplayFixtureMissing:
+        raise
     except Exception as e:
+        # Don't silently mark the tip verified — an LLM outage or quota
+        # exhaustion here previously produced "0 dropped (LLM)" in the
+        # funnel, which reads as a clean bill of health rather than "layer
+        # 2 never ran". Surface it as an explicit skip instead.
         logger.warning(f"LLM verification call failed: {e}")
-        return {"supported": True}  # Pass through on failure
+        return {"supported": True, "llm_verify_skipped": True, "reason": str(e)}
