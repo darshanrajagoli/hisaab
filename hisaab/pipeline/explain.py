@@ -99,7 +99,9 @@ def _fetch_explanation(
         return ("", "")
 
     # LLM generates a one-line explanation
-    prompt = f"""Based on these news articles about {company_name} ({tip.ticker}), write ONE neutral sentence explaining why the stock {"rose" if (tip.excess_return or 0) > 0 else "fell"} during this period.
+    move_direction = "rose" if (tip.excess_return or 0) > 0 else "fell"
+    prompt = f"""Based on these news articles about {company_name} ({tip.ticker}), write ONE \
+neutral sentence explaining why the stock {move_direction} during this period.
 
 Articles:
 {chr(10).join(article_summaries)}

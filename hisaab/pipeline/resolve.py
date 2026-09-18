@@ -83,7 +83,8 @@ class TickerResolver:
         """
         Resolve a company name to an NSE symbol.
 
-        Returns: {"symbol": "RELIANCE", "nse_ticker": "RELIANCE:NSE", "isin": "...", "method": "..."}
+        Returns: {"symbol": "RELIANCE", "nse_ticker": "RELIANCE:NSE",
+                  "isin": "...", "method": "..."}
         """
         name = company_name.strip()
         name_lower = name.lower()

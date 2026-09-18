@@ -81,7 +81,8 @@ class SerpCache:
         ttl = ENGINE_TTL.get(engine, DEFAULT_TTL)
         self._conn.execute(
             """
-            INSERT OR REPLACE INTO cache (cache_key, engine, params_json, response_json, created_at, ttl)
+            INSERT OR REPLACE INTO cache
+                (cache_key, engine, params_json, response_json, created_at, ttl)
             VALUES (?, ?, ?, ?, ?, ?)
             """,
             (
