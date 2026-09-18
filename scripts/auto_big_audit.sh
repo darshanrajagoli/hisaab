@@ -9,6 +9,14 @@
 set -u
 cd "$(dirname "$0")/.."
 
+LOCK_FILE="/tmp/auto_big_audit.lock"
+if [ -f "$LOCK_FILE" ] && kill -0 "$(cat "$LOCK_FILE")" 2>/dev/null; then
+    echo "Another instance is already running (PID $(cat "$LOCK_FILE")). Exiting."
+    exit 1
+fi
+echo $$ > "$LOCK_FILE"
+trap 'rm -f "$LOCK_FILE"' EXIT
+
 CHANNEL="@RakeshBansal"
 MAX_VIDEOS=20
 QUOTA_RETRY_SECS=1800     # 30 min — daily/rate quota errors, unlikely to clear sooner
@@ -30,7 +38,7 @@ consecutive_transient=0
 while [ "$attempt" -lt "$MAX_ATTEMPTS" ]; do
     attempt=$((attempt + 1))
     echo "=== Attempt $attempt/$MAX_ATTEMPTS at $(date) ==="
-    log="/tmp/auto_big_audit_run_${attempt}.log"
+    log="/tmp/auto_big_audit_run_$$_${attempt}.log"
 
     HISAAB_RUN_CAP=200 python -m hisaab.cli audit "$CHANNEL" --max-videos "$MAX_VIDEOS" \
         > "$log" 2>&1
