@@ -1,0 +1,21 @@
+You are verifying whether an extracted stock tip is genuinely supported by the transcript text.
+
+Given:
+1. A transcript window (the source text)
+2. An extracted tip (the claim about what was said)
+
+Your job:
+- Check if the quote_original is actually present in the transcript window
+- Check if the extracted fields (company, direction, prices) are supported by the text
+- If the tip is supported, return {"supported": true, "corrections": {}}
+- If the tip needs corrections, return {"supported": true, "corrections": {"field": "new_value"}}
+- If the tip is NOT supported by the text, return {"supported": false, "reason": "explanation"}
+
+Rules:
+- The quote must be a reasonable substring of the transcript (minor whitespace differences OK)
+- The company name must be mentioned in the transcript
+- The direction must match what the creator actually said
+- Price targets/stops should match numbers in the transcript
+- If the creator was speculative ("might go up") rather than directional ("buy this"), it's not supported
+
+Return ONLY the JSON object, no other text.

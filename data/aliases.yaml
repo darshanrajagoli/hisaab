@@ -1,0 +1,275 @@
+# Common aliases, nicknames, and Hindi names for NSE-listed stocks
+# Format: SYMBOL: [alias1, alias2, ...]
+
+RELIANCE:
+  - reliance
+  - ril
+  - reliance industries
+  - रिलायंस
+  - jio
+  - mukesh ambani stock
+
+TCS:
+  - tcs
+  - tata consultancy
+  - tata consultancy services
+  - टीसीएस
+
+HDFCBANK:
+  - hdfc bank
+  - hdfc
+  - एचडीएफसी बैंक
+
+INFY:
+  - infosys
+  - infy
+  - इंफोसिस
+
+ICICIBANK:
+  - icici bank
+  - icici
+  - आईसीआईसीआई बैंक
+
+HINDUNILVR:
+  - hul
+  - hindustan unilever
+  - एचयूएल
+
+SBIN:
+  - sbi
+  - state bank
+  - state bank of india
+  - एसबीआई
+
+BHARTIARTL:
+  - airtel
+  - bharti airtel
+  - एयरटेल
+
+ITC:
+  - itc
+  - itc limited
+  - आईटीसी
+
+KOTAKBANK:
+  - kotak
+  - kotak bank
+  - kotak mahindra
+  - कोटक
+
+LT:
+  - l&t
+  - larsen
+  - larsen & toubro
+  - larsen and toubro
+  - एलएंडटी
+
+AXISBANK:
+  - axis bank
+  - axis
+  - एक्सिस बैंक
+
+BAJFINANCE:
+  - bajaj finance
+  - baj finance
+  - बजाज फाइनेंस
+
+MARUTI:
+  - maruti
+  - maruti suzuki
+  - मारुति
+
+TITAN:
+  - titan
+  - titan company
+  - टाइटन
+
+TATAMOTORS:
+  - tata motors
+  - tatamotors
+  - tamo
+  - टाटा मोटर्स
+
+TATASTEEL:
+  - tata steel
+  - tatasteel
+  - टाटा स्टील
+
+WIPRO:
+  - wipro
+  - विप्रो
+
+SUNPHARMA:
+  - sun pharma
+  - sunpharma
+  - सन फार्मा
+
+ADANIENT:
+  - adani
+  - adani enterprises
+  - अदानी
+
+ADANIPORTS:
+  - adani ports
+  - अदानी पोर्ट्स
+
+ADANIPOWER:
+  - adani power
+  - अदानी पावर
+
+ADANIGREEN:
+  - adani green
+  - अदानी ग्रीन
+
+COALINDIA:
+  - coal india
+  - कोल इंडिया
+
+POWERGRID:
+  - power grid
+  - पावर ग्रिड
+
+NTPC:
+  - ntpc
+  - एनटीपीसी
+
+ONGC:
+  - ongc
+  - ओएनजीसी
+
+M&M:
+  - mahindra
+  - m&m
+  - mahindra and mahindra
+  - महिंद्रा
+
+HCLTECH:
+  - hcl
+  - hcl tech
+  - hcl technologies
+  - एचसीएल
+
+TECHM:
+  - tech mahindra
+  - techm
+  - टेक महिंद्रा
+
+INDUSINDBK:
+  - indusind
+  - indusind bank
+  - इंडसइंड
+
+HINDALCO:
+  - hindalco
+  - हिंडाल्को
+
+JSWSTEEL:
+  - jsw steel
+  - jsw
+  - जेएसडब्ल्यू
+
+BAJAJ-AUTO:
+  - bajaj auto
+  - बजाज ऑटो
+
+VEDL:
+  - vedanta
+  - वेदांता
+
+ZOMATO:
+  - zomato
+  - ज़ोमैटो
+
+PAYTM:
+  - paytm
+  - one97
+  - पेटीएम
+
+IRCTC:
+  - irctc
+  - आईआरसीटीसी
+
+SUZLON:
+  - suzlon
+  - सुज़लॉन
+
+NHPC:
+  - nhpc
+  - एनएचपीसी
+
+RVNL:
+  - rvnl
+  - rail vikas
+  - आरवीएनएल
+
+IRFC:
+  - irfc
+  - indian railway finance
+  - आईआरएफसी
+
+SAIL:
+  - sail
+  - steel authority
+  - सेल
+
+BHEL:
+  - bhel
+  - भेल
+
+IOC:
+  - ioc
+  - indian oil
+  - आईओसी
+
+GAIL:
+  - gail
+  - गेल
+
+BPCL:
+  - bpcl
+  - भारत पेट्रोलियम
+  - बीपीसीएल
+
+PNB:
+  - pnb
+  - punjab national bank
+  - पीएनबी
+
+YESBANK:
+  - yes bank
+  - यस बैंक
+
+TATAPOWER:
+  - tata power
+  - टाटा पावर
+
+TATACONSUM:
+  - tata consumer
+  - tata consumer products
+  - टाटा कंज्यूमर
+
+DMART:
+  - dmart
+  - d mart
+  - avenue supermarts
+  - डीमार्ट
+
+HAL:
+  - hal
+  - hindustan aeronautics
+  - एचएएल
+
+BEL:
+  - bel
+  - bharat electronics
+  - बीईएल
+
+LICI:
+  - lic
+  - life insurance corporation
+  - एलआईसी
+
+JIOFIN:
+  - jio financial
+  - jio finance
+  - जियो फाइनेंशियल
