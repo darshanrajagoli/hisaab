@@ -1,7 +1,11 @@
 """
 Step 12: Corporate action detection.
 
-Flags single-period moves beyond ±35% that aren't explained by news.
+Flags any single-period move beyond ±35% in the price series — a "period"
+is one row of that ticker's fetched series, which is a trading day on a
+1M/6M/1Y window but a full week on a 5Y window (see prices.py). There is
+no news lookup here; this is a pure price-jump heuristic and will flag a
+genuine 35%+ crash/rally exactly the same as a split or demerger.
 Splits, bonuses, and demergers break naive returns.
 Flagged tips are excluded from aggregates.
 """

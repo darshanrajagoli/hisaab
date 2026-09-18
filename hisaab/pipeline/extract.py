@@ -119,6 +119,28 @@ Extract all actionable stock tips. Return a JSON array."""
             item.setdefault("conviction_flags", [])
             item.setdefault("extractor_confidence", 0.5)
 
+            # The prompt asks the LLM to restate start_ms/end_ms, and it
+            # occasionally hallucinates a value outside the window it was
+            # actually shown (e.g. 0 or a small offset) — that timestamp
+            # drives the YouTube deep-link on the Tip Detail screen, so an
+            # out-of-range value would silently point at the wrong moment.
+            # Clamp to the window we actually sent, don't trust the echo.
+            try:
+                start_ms = int(item["start_ms"])
+            except (TypeError, ValueError):
+                start_ms = window.start_ms
+            if not (window.start_ms <= start_ms <= window.end_ms):
+                start_ms = window.start_ms
+            item["start_ms"] = start_ms
+
+            try:
+                end_ms = int(item["end_ms"])
+            except (TypeError, ValueError):
+                end_ms = window.end_ms
+            if not (start_ms <= end_ms <= window.end_ms):
+                end_ms = window.end_ms
+            item["end_ms"] = end_ms
+
             item["direction"] = _normalize_enum(item.get("direction"), _DIRECTION_SYNONYMS, "LONG")
             item["instrument_type"] = _normalize_enum(
                 item.get("instrument_type"), _INSTRUMENT_SYNONYMS, "EQUITY"

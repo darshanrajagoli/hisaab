@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 
-from hisaab.llm import classify_video_titles
+from hisaab.llm import ReplayFixtureMissing, classify_video_titles
 from hisaab.models import VideoInfo
 
 logger = logging.getLogger(__name__)
@@ -38,6 +38,8 @@ def select_videos(
             class_map = {c["video_id"]: c["classification"] for c in classifications}
             for v in videos:
                 v.classification = class_map.get(v.video_id, "unknown")
+        except ReplayFixtureMissing:
+            raise
         except Exception as e:
             logger.warning(f"LLM classification failed, using heuristics: {e}")
             for v in videos:

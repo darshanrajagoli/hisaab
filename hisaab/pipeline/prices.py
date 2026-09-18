@@ -129,13 +129,21 @@ def _parse_price_series(result: dict) -> Optional[pd.DataFrame]:
     return df
 
 
+MAX_SNAP_DAYS = 10  # weekly bars can legitimately be ~7 days apart
+
+
 def get_close_on_date(
     series: pd.DataFrame, target_date: date, after: bool = True
 ) -> Optional[tuple[date, float]]:
     """
     Get the closing price on or after/before a target date.
 
-    Returns: (actual_date, close_price) or None
+    Returns: (actual_date, close_price) or None. Snapping is bounded to
+    MAX_SNAP_DAYS — an unbounded snap-forward would silently use a much
+    later entry price for a ticker whose series starts after target_date
+    (a too-narrow fetch window, a new listing, or a demerged/renamed
+    entity), scoring the tip as if it entered on a date the stock wasn't
+    actually bought at.
     """
     if series is None or series.empty:
         return None
@@ -154,7 +162,12 @@ def get_close_on_date(
     else:
         row = filtered.iloc[-1]
 
-    return (row["date"], float(row["close"]))
+    actual_date = row["date"]
+    gap = abs((actual_date - target_date).days)
+    if gap > MAX_SNAP_DAYS:
+        return None
+
+    return (actual_date, float(row["close"]))
 
 
 def get_series_between(series: pd.DataFrame, start_date: date, end_date: date) -> pd.DataFrame:

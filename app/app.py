@@ -1,13 +1,12 @@
 """
 Hisaab — Streamlit UI
 
-Six screens:
-1. Home: input + budget panel
-2. Live run: stage-by-stage progress
-3. Scorecard: headline numbers + charts
-4. Tip detail: embedded video + price chart
-5. Compare: side-by-side channels
-6. Methodology: scoring rules
+Five screens (the sidebar radio below is the source of truth):
+1. Home: input + budget panel + live run progress
+2. Scorecard: headline numbers + charts
+3. Tip detail: embedded video + price chart
+4. Compare: side-by-side channels
+5. Methodology: scoring rules
 """
 
 import os
@@ -88,8 +87,11 @@ if page == "🏠 Home":
 
     if st.button("🚀 Run Audit", type="primary", disabled=not user_input):
         run_mode = "replay" if "Replay" in mode else "live"
-        if run_mode == "replay":
-            os.environ["HISAAB_MODE"] = "replay"
+        # llm.py reads this env var globally, and a Streamlit process stays
+        # alive across reruns — leaving it set to "replay" after a replay
+        # run would permanently break a later Live run in the same session
+        # until the process restarts. Always set it explicitly either way.
+        os.environ["HISAAB_MODE"] = run_mode
 
         try:
             client = SerpClient(mode=run_mode)
@@ -315,19 +317,32 @@ elif page == "🔍 Tip Detail":
     col1, col2 = st.columns([1, 1])
 
     with col1:
-        # Embedded YouTube player at exact timestamp
+        # Embedded YouTube player at exact timestamp. video_id is
+        # interpolated into raw HTML below (unsafe_allow_html) — validate
+        # it looks like a real YouTube ID first rather than trusting
+        # whatever ended up in storage (it ultimately traces back to a
+        # regex extraction off a user-pasted URL in discover.py).
+        import re as _re
+
         start_seconds = tip.start_ms // 1000
-        yt_url = f"https://www.youtube.com/embed/{tip.video_id}?start={start_seconds}&autoplay=0"
-        st.markdown(
-            f'<iframe width="100%" height="315" src="{yt_url}" '
-            'frameborder="0" allowfullscreen></iframe>',
-            unsafe_allow_html=True,
-        )
-        st.caption(f"Jump to {start_seconds // 60}:{start_seconds % 60:02d}")
+        if _re.fullmatch(r"[A-Za-z0-9_-]{11}", tip.video_id or ""):
+            yt_url = (
+                f"https://www.youtube.com/embed/{tip.video_id}?start={start_seconds}&autoplay=0"
+            )
+            st.markdown(
+                f'<iframe width="100%" height="315" src="{yt_url}" '
+                'frameborder="0" allowfullscreen></iframe>',
+                unsafe_allow_html=True,
+            )
+            st.caption(f"Jump to {start_seconds // 60}:{start_seconds % 60:02d}")
+        else:
+            st.warning(f"Invalid video ID, can't embed player: {tip.video_id!r}")
 
         # Quote
         st.markdown(f"**Original:** _{tip.quote_original}_")
         st.markdown(f"**English:** {tip.quote_english}")
+        if tip.verification_notes:
+            st.caption(f"⚠ {tip.verification_notes}")
 
     with col2:
         # Outcome badge
@@ -517,7 +532,8 @@ elif page == "📐 Methodology":
     - F&O (strike and expiry make it out of scope)
     - IPO, Mutual Fund, Crypto
     - Unresolved tickers
-    - Corporate action flags (>35% single-day move)
+    - Corporate action flags (>35% move in a single price-series period —
+      a trading day on short windows, a full week on the 5Y window)
     - Not triggered (stated entry never reached)
     - OPEN (horizon not yet elapsed)
 
@@ -538,6 +554,11 @@ elif page == "📐 Methodology":
       delisted stocks (often the worst outcomes) can never be scored
     - Video selection uses SerpApi's in-channel search ranking, which skews
       toward whatever the creator's own audience engaged with most
+    - A video with a transcript covering only its first minute still counts
+      as "audited" — any tip made later in it is never seen
+    - The stock and NIFTY legs of excess return can land on different price
+      granularities (daily vs weekly), since the index's fetch window is
+      chosen from the oldest tip in the whole run, not per-tip
 
     ### Disclaimer
     This tool is for **educational purposes only** and does not constitute investment advice.

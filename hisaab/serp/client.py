@@ -94,8 +94,12 @@ class SerpClient:
             if fixture is not None:
                 logger.debug(f"Fixture HIT: {engine} ({cache_key[:12]})")
                 self.budget.record_cache_hit(engine)
-                # Store in cache for subsequent lookups
-                self.cache.put(full_params, fixture)
+                # Deliberately NOT written into the persistent SerpCache:
+                # count_calls_since() below counts cache rows created since
+                # month start as real API usage to restore the budget
+                # across process runs, so writing replay fixture hits in
+                # there would make replay runs (zero network calls) eat
+                # into the live monthly budget the next time it's read.
                 return fixture
             raise SerpApiError(
                 f"No fixture found for {engine} (key: {cache_key[:12]}). "

@@ -24,11 +24,20 @@ TRANSIENT_RETRY_SECS=120  # 2 min — network blips, 5xx overloads, other one-of
 MAX_ATTEMPTS=80
 MIN_SCORED_TIPS=10
 
+if [ ! -f .env ]; then
+    echo "No .env file found — live mode needs API keys. Exiting rather than retrying for hours."
+    exit 1
+fi
 set -a
 source .env
 set +a
 
 # Any line matching one of these means "not our bug, just try again later".
+# NOTE: cli.py's own fail-fast for a missing GEMINI_API_KEY also contains
+# the word "quota" in its error message — that's a config error, not a
+# transient one, and must never match this pattern or it retries for
+# hours instead of failing immediately.
+MISSING_KEY_PATTERN='GEMINI_API_KEY is not set'
 QUOTA_PATTERN='RESOURCE_EXHAUSTED|rate.?limit|429|quota'
 TRANSIENT_PATTERN='ServerError|503|ConnectionError|ConnectionReset|Timeout|timed out|Temporary failure|EOF occurred|Connection aborted|Connection refused|Max retries exceeded|Broken pipe'
 
@@ -70,7 +79,10 @@ while [ "$attempt" -lt "$MAX_ATTEMPTS" ]; do
 
         python scripts/export_fixtures.py demo
         git add fixtures/demo
-        if ! git diff --cached --quiet; then
+        # Scope the check to fixtures/demo specifically — `git diff --cached
+        # --quiet` with no path checks the WHOLE index, so anything else the
+        # developer had staged would get swept into this automated commit.
+        if ! git diff --cached --quiet -- fixtures/demo; then
             git commit -m "$(cat <<EOF
 data: refresh demo fixture bundle from completed big audit run
 
@@ -82,11 +94,16 @@ EOF
 )"
             # Network to GitHub can also blip — retry the push a few times
             # before giving up on this otherwise-successful run.
+            pushed=1
             for push_try in 1 2 3 4 5; do
-                git push origin main && break
+                git push origin main && { pushed=0; break; }
                 echo "Push attempt ${push_try} failed, retrying in 30s"
                 sleep 30
             done
+            if [ "$pushed" -ne 0 ]; then
+                echo "Push failed after 5 attempts — commit ${scored} scored tips exists LOCALLY only."
+                exit 1
+            fi
         fi
 
         echo "Done."
@@ -94,7 +111,10 @@ EOF
     fi
 
     # Non-zero exit: classify why and decide how long to back off.
-    if grep -qiE "$QUOTA_PATTERN" "$log"; then
+    if grep -qE "$MISSING_KEY_PATTERN" "$log"; then
+        echo "Missing GEMINI_API_KEY — a config error, not transient. Giving up."
+        exit 1
+    elif grep -qiE "$QUOTA_PATTERN" "$log"; then
         echo "Quota/rate-limit error, sleeping ${QUOTA_RETRY_SECS}s"
         consecutive_transient=0
         sleep "$QUOTA_RETRY_SECS"

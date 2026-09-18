@@ -3,7 +3,7 @@ Step 14: Aggregate statistics.
 
 Wilson 95% confidence intervals for hit rates.
 Bootstrap 95% CI for mean excess return.
-One-sided binomial test against a 50% coin flip.
+Two-sided binomial test against a 50% coin flip.
 ₹10,000-per-tip simulation.
 Conviction analysis.
 
@@ -46,12 +46,15 @@ def compute_stats(
     cs.total_scored = len(scored)
     cs.total_unscored = len(unscored)
 
-    # Unscored breakdown
+    # Unscored breakdown. OPEN tips are counted under their own bucket
+    # below — counting them again here under a generic "UNKNOWN" would
+    # double-count them and make the breakdown not sum to total_unscored.
     for t in unscored:
+        if t.outcome == TipOutcome.OPEN:
+            continue
         reason = t.unscored_reason.value if t.unscored_reason else "UNKNOWN"
         cs.unscored_breakdown[reason] = cs.unscored_breakdown.get(reason, 0) + 1
 
-    # Count OPEN tips separately
     open_tips = [t for t in tips if t.outcome == TipOutcome.OPEN]
     if open_tips:
         cs.unscored_breakdown["OPEN"] = len(open_tips)
@@ -222,8 +225,12 @@ def simulate_portfolio(
     nifty_pnl = 0.0
     timeline = []
 
-    # Sort by entry date for time series
-    scored_sorted = sorted(scored, key=lambda t: t.entry_date or "")
+    # Sort by exit date, since that's the date plotted per point below —
+    # sorting by entry_date instead (as this used to) can produce a
+    # non-monotonic x-axis once tips have different horizons, because a
+    # later-entered short-horizon tip can exit before an earlier-entered
+    # long-horizon one.
+    scored_sorted = sorted(scored, key=lambda t: t.exit_date or "")
 
     for tip in scored_sorted:
         tip_pnl = SIM_AMOUNT * tip.stock_return

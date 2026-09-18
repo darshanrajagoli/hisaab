@@ -37,13 +37,30 @@ Channel URL → Discover Videos → Classify → Select Top N
 
 ### Replay Mode (No API Key Needed)
 
-Judges and reviewers can run the full app immediately:
+Judges and reviewers can run the full app immediately, with zero network
+calls, against the bundled fixture bundle for `@RakeshBansal`:
 
 ```bash
 git clone https://github.com/darshanrajagoli/hisaab.git
 cd hisaab
 pip install -e .
+
+# CLI
+hisaab audit @RakeshBansal --replay demo
+
+# Web UI — pick "Replay" mode in the sidebar, then Run Audit
+streamlit run app/app.py
 ```
+
+**Current limitation:** the fixture bundle covers the five SerpApi engines
+(YouTube, Google Finance, Google News) but does not yet ship a cached set
+of LLM (Gemini) responses — that half of replay mode still needs a
+successful live run to populate. Right now a fresh clone's replay run will
+fail loudly with `ReplayFixtureMissing` at the tip-extraction stage rather
+than silently returning an empty scorecard (that loud failure is
+deliberate — see Limitations). Live mode with your own `GEMINI_API_KEY`
+and `SERPAPI_API_KEY` is the reliable path until an LLM fixture cache
+ships.
 
 ### Live Mode
 
@@ -170,7 +187,7 @@ Typical audit: **~35 searches** per channel. Free plan (250/month) supports ~7 f
 ### Entry Rule
 The entry price is the closing price on the **first trading day strictly after** the video's publish date. This avoids using information the viewer couldn't have had.
 
-If the creator stated a specific entry price, the tip only counts as "triggered" if the close reaches that entry within 5 trading days. Otherwise: `NOT_TRIGGERED`.
+If the creator stated a specific entry price, the tip only counts as "triggered" if the close reaches within 2% of that stated entry within 5 trading days. Otherwise: `NOT_TRIGGERED`. Either way, scoring always uses the actual next-day close as the entry price — the stated entry is only a trigger gate, never the price used for return math.
 
 ### Horizon Rule
 The horizon is a fixed default per bucket, not a free-text parse of the
@@ -207,7 +224,8 @@ Only closing prices are used — intraday touches not counted.
 ### Unscored Categories (shown, not hidden)
 - INTRADAY, F&O, IPO, Mutual Fund, Crypto
 - Unresolved tickers
-- Corporate action flags (>35% single-day move)
+- Corporate action flags (>35% move in a single price-series period —
+  a trading day on short windows, a full week on the 5Y window)
 - Not triggered, Open (horizon not elapsed)
 
 ### Limitations
@@ -230,6 +248,22 @@ Only closing prices are used — intraday touches not counted.
   correlates with view count and engagement — likely to over-sample the
   same "winner" videos creators themselves promote, rather than a random
   or complete sample of everything they said
+- Transcripts are accepted as long as they contain at least one snippet —
+  a video whose transcript only actually covers its first minute (a
+  common ASR/captioning gap on longer videos) is still counted as "audited"
+  in the funnel, and any tip made later in that video is simply never seen
+- The stock series and the NIFTY series for the same tip can land on
+  different Google Finance windows (e.g. a stock fetched on a 1Y/daily
+  window differenced against an index fetched on a wider/weekly window
+  for the same run), because the index's window is chosen from the oldest
+  tip across the whole run rather than per-tip — excess return can
+  therefore compare a daily-bar stock move against a weekly-bar index move
+- The demo fixture bundle in `fixtures/demo/` is dated: Google Finance's
+  window parameter (1M/6M/1Y/5Y) is chosen from how old a tip is *relative
+  to today*, so as real time passes, previously-cached fixtures fall out
+  of their original window and a fresh replay run can start missing
+  fixtures it used to hit — the bundle isn't permanently reproducible,
+  it needs periodic re-export
 
 ---
 

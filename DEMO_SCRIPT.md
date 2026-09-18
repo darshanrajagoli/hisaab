@@ -48,7 +48,12 @@ LLM only reads, Python judges. And the limitations are stated up front, not hidd
 
 ## If something breaks live
 - **Empty scorecard**: switch the Mode toggle to Replay and re-run — it uses the
-  bundled fixtures, zero network calls needed.
+  bundled fixtures for the SerpApi side (YouTube/Finance/News), zero network calls
+  needed for those. NOTE: the LLM (Gemini) side of replay isn't cached yet, so a
+  replay run will fail loudly at extraction unless you've already run this exact
+  channel live once this session (which populates `hisaab_llm_cache.db` locally).
+  Don't rely on Replay as an on-camera save unless you've verified it works on
+  your machine beforehand — pre-flight it, don't discover it live.
 - **Slow LLM calls**: this is expected on the free tier (~20s/window) — cut it in
   editing, don't wait live.
 - **"insufficient evidence" banner**: pick a channel/run you've already validated

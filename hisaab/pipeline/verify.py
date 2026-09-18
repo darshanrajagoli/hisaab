@@ -83,10 +83,15 @@ def verify_tips(
             tip_dict = tip.model_dump()
             tip_dict.update(corrections)
             _renormalize_enums(tip_dict)
-            try:
-                vtip = VerifiedTip(
-                    **tip_dict, verification_notes=str(corrections) if corrections else ""
+            notes = str(corrections) if corrections else ""
+            if llm_result.get("llm_verify_skipped"):
+                skip_note = (
+                    "LLM verification layer was skipped (API error) — "
+                    "only fuzzy-match verified"
                 )
+                notes = f"{notes}; {skip_note}" if notes else skip_note
+            try:
+                vtip = VerifiedTip(**tip_dict, verification_notes=notes)
             except Exception as e:
                 # An LLM correction can still produce an invalid combination
                 # (e.g. a bad enum) — don't let one bad tip kill the whole run.
@@ -137,24 +142,37 @@ def merge_duplicates(tips: list[VerifiedTip]) -> list[VerifiedTip]:
             merged.append(group[0])
             continue
 
-        # Sort by start_ms, keep earliest
+        # Sort by start_ms, keep earliest — this is the timestamp the Tip
+        # Detail screen deep-links to, so any field backfilled from a later
+        # mention below was NOT necessarily said at that exact moment.
         group.sort(key=lambda t: t.start_ms)
         primary = group[0]
+        backfilled_from_later: list[str] = []
 
         # Merge fields from later mentions
         for later in group[1:]:
             if primary.stated_target is None and later.stated_target is not None:
                 primary.stated_target = later.stated_target
+                backfilled_from_later.append("target")
             if primary.stated_stop_loss is None and later.stated_stop_loss is not None:
                 primary.stated_stop_loss = later.stated_stop_loss
+                backfilled_from_later.append("stop_loss")
             if primary.stated_entry_price is None and later.stated_entry_price is not None:
                 primary.stated_entry_price = later.stated_entry_price
+                backfilled_from_later.append("entry_price")
             if (
                 primary.horizon_bucket.value == "UNSPECIFIED"
                 and later.horizon_bucket.value != "UNSPECIFIED"
             ):
                 primary.horizon_bucket = later.horizon_bucket
             primary.conviction_flags = list(set(primary.conviction_flags + later.conviction_flags))
+
+        if backfilled_from_later:
+            fields = ", ".join(sorted(set(backfilled_from_later)))
+            note = f"Filled in from a later mention in the same video: {fields}"
+            primary.verification_notes = (
+                f"{primary.verification_notes}; {note}" if primary.verification_notes else note
+            )
 
         merged.append(primary)
 

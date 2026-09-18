@@ -21,7 +21,7 @@ from typing import Optional
 import yaml
 from rapidfuzz import fuzz, process
 
-from hisaab.llm import call_llm_json
+from hisaab.llm import ReplayFixtureMissing, call_llm_json
 from hisaab.models import ResolvedTip, VerifiedTip
 
 logger = logging.getLogger(__name__)
@@ -161,6 +161,8 @@ If none match, return {{"symbol": null}}"""
             symbol = result.get("symbol")
             if symbol and symbol in self.nse_data:
                 return symbol
+        except ReplayFixtureMissing:
+            raise
         except Exception as e:
             logger.debug(f"LLM disambiguation failed: {e}")
 
