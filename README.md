@@ -2,7 +2,7 @@
 
 > **hisaab keeps the receipts.**
 
-**🔴 [Live Demo](https://hisaab.streamlit.app)** — no install needed, just click. _(Replace this URL with your actual Streamlit Community Cloud app URL once deployed — see Deployment below.)_
+**🔴 [Live Demo](https://hisaab-ccb6uxs8tjolxrzvcvpkoc.streamlit.app)** — no install needed, just click.
 
 Every stock tip on YouTube is a timestamped prediction. Hisaab finds each tip in a creator's videos, records the exact second it was said, and grades it against what the stock actually did afterwards — compared to the NIFTY 50. The output is a verifiable scorecard.
 
