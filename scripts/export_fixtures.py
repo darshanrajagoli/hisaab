@@ -35,8 +35,15 @@ def export(bundle_name: str = "demo") -> None:
 
     index: dict[str, str] = {}
     for cache_key, response_json in rows:
+        response = json.loads(response_json)
+        # search_metadata carries account-linked SerpApi archive permalinks
+        # (serpapi.com/searches/<token>/...) — not secrets, but no reason to
+        # publish them in a public repo. The rest of the response (what the
+        # pipeline actually reads) is untouched.
+        response.pop("search_metadata", None)
+
         filename = f"{cache_key}.json"
-        (out_dir / filename).write_text(response_json, encoding="utf-8")
+        (out_dir / filename).write_text(json.dumps(response), encoding="utf-8")
         index[cache_key] = filename
 
     (out_dir / "index.json").write_text(json.dumps(index, indent=2), encoding="utf-8")

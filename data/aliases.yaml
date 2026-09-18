@@ -84,7 +84,9 @@ TITAN:
   - titan company
   - टाइटन
 
-TATAMOTORS:
+TMCV:
+  # Tata Motors demerged in 2025; TATAMOTORS the symbol no longer exists on
+  # the current NSE listing — remapped to the commercial-vehicle successor.
   - tata motors
   - tatamotors
   - tamo
@@ -176,9 +178,12 @@ VEDL:
   - vedanta
   - वेदांता
 
-ZOMATO:
+ETERNAL:
+  # Zomato renamed to Eternal Limited in 2024; ZOMATO the symbol no longer
+  # exists on the current NSE listing.
   - zomato
   - ज़ोमैटो
+  - eternal
 
 PAYTM:
   - paytm

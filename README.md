@@ -239,7 +239,7 @@ Only closing prices are used — intraday touches not counted.
 hisaab/
 ├── hisaab/
 │   ├── serp/           # SerpApi client, cache, budget, fixtures
-│   ├── pipeline/       # Discovery → Score (12 modules)
+│   ├── pipeline/       # Discovery → Score (14 modules)
 │   ├── prompts/        # LLM prompts as text files
 │   ├── models.py       # Pydantic domain models
 │   ├── llm.py          # LLM abstraction
@@ -249,8 +249,7 @@ hisaab/
 ├── data/               # NSE equity list, aliases
 ├── fixtures/demo/      # Replay bundle for offline use
 ├── tests/              # Unit tests (scoring, stats, cache, resolver)
-├── docs/               # Architecture diagram
-└── .github/workflows/  # CI (runs in replay mode, no secrets)
+└── .github/workflows/  # CI (lints app/hisaab/scripts/tests, runs pytest in replay mode)
 ```
 
 ---
