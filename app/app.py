@@ -70,12 +70,18 @@ if page == "🏠 Home":
 
     with col2:
         st.markdown("### 💰 API Budget")
-        from hisaab.serp.budget import BudgetGovernor
         from hisaab.serp.client import SerpClient
 
-        budget = BudgetGovernor()
-        st.metric("Monthly Remaining", f"{budget.remaining_monthly()}")
-        st.metric("Run Cap", f"{budget.run_cap}")
+        # SerpClient restores actual usage-to-date from the cache DB on
+        # construction — a bare BudgetGovernor() always shows the full cap
+        # regardless of real usage, which is a dashboard that lies.
+        try:
+            _budget_client = SerpClient(mode="replay")
+            budget = _budget_client.budget
+            st.metric("Monthly Remaining", f"{budget.remaining_monthly()}")
+            st.metric("Run Cap", f"{budget.run_cap}")
+        except Exception:
+            st.caption("Budget unavailable (no cache DB yet)")
         st.caption("Cached searches are free")
 
     st.divider()
@@ -479,11 +485,14 @@ elif page == "📐 Methodology":
     publish time.
 
     If the creator stated a specific entry price, the tip only counts as "triggered" if
-    the close reaches that entry within 5 trading days. Otherwise it's marked NOT_TRIGGERED.
+    the close reaches within 2% of that entry within 5 trading days — but the entry
+    price used for scoring is still the day-1 close, not the stated price; the stated
+    price is only a trigger gate. Otherwise it's marked NOT_TRIGGERED.
 
     ### Horizon Rule
-    - If the creator stated a timeframe, that's used
-    - Otherwise, bucket defaults apply:
+    The LLM extracts the creator's stated timeframe as text for display, but scoring
+    always uses the fixed bucket default (a free-text "3 months" isn't parsed into a
+    day count):
       - SWING: 10 trading days
       - POSITIONAL: 60 trading days
       - LONG_TERM: 250 trading days
@@ -515,14 +524,20 @@ elif page == "📐 Methodology":
     ### Statistical Tests
     - **Hit Rate CI**: Wilson 95% confidence interval
     - **Excess Return CI**: Bootstrap 95% CI (10,000 resamples, fixed seed)
-    - **Binomial Test**: One-sided test against a 50% coin flip
+    - **Binomial Test**: Two-sided test against a 50% coin flip
 
     ### Limitations
     - Only closing prices available (not intraday)
     - Auto-generated transcripts may have errors
-    - Corporate actions (splits, bonuses) can distort returns
     - F&O calls are out of scope (need strike/expiry data)
     - Entry timing assumes next-day close (viewer may enter differently)
+    - HOLD/WATCHLIST calls are scored as full long positions in the P&L simulation
+    - The >35% move exclusion filters split/bonus noise but also drops genuine
+      crashes, biasing aggregates slightly in the creator's favor
+    - The ticker list only covers currently-listed companies — tips on since-
+      delisted stocks (often the worst outcomes) can never be scored
+    - Video selection uses SerpApi's in-channel search ranking, which skews
+      toward whatever the creator's own audience engaged with most
 
     ### Disclaimer
     This tool is for **educational purposes only** and does not constitute investment advice.

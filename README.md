@@ -213,9 +213,23 @@ Only closing prices are used — intraday touches not counted.
 ### Limitations
 - Only closing prices available (not intraday highs/lows)
 - Auto-generated transcripts may have errors, especially in Hinglish
-- Corporate actions (splits, bonuses, demergers) can distort naive returns
 - F&O calls are out of scope — strike, expiry, and premium data unavailable
 - Entry timing assumes next-day close; real viewers may enter differently
+- HOLD and WATCHLIST calls are scored as full long positions in the
+  ₹10,000/tip simulation (only SHORT/AVOID flip the return sign) — a
+  "keep this on your watchlist" mention gets a real P&L entry
+- Tips whose price window contains a >35% single-period move are excluded
+  from scoring entirely. This is meant to filter split/bonus distortions,
+  but it also excludes genuine crashes (fraud, block deals, delisting
+  scares) — since those are disproportionately bad outcomes, this biases
+  the aggregate stats slightly in the creator's favor
+- The NSE ticker list is a snapshot of currently-listed companies; tips on
+  since-delisted or suspended stocks (structurally the worst outcomes)
+  can never resolve or score — another source of favorable bias
+- Video discovery uses SerpApi's search ranking within a channel, which
+  correlates with view count and engagement — likely to over-sample the
+  same "winner" videos creators themselves promote, rather than a random
+  or complete sample of everything they said
 
 ---
 

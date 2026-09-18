@@ -114,6 +114,15 @@ def audit(
         console.print(f"[red]Error:[/red] {e}")
         raise typer.Exit(1)
 
+    if mode == "live" and not os.getenv("GEMINI_API_KEY"):
+        console.print(
+            "[red]Error:[/red] GEMINI_API_KEY is not set. Live mode needs it for tip "
+            "extraction/verification — without it every SerpApi call still runs "
+            "(spending your monthly quota) but the pipeline extracts zero tips. "
+            "Set it in .env or use --replay demo to run with no API keys."
+        )
+        raise typer.Exit(1)
+
     store = HisaabStore()
 
     # Show budget
