@@ -22,6 +22,18 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# On Streamlit Community Cloud, API keys are configured as "Secrets" in the
+# app dashboard (st.secrets), not as a .env file — they don't land in
+# os.environ automatically, but everything downstream (SerpClient, llm.py)
+# reads via os.getenv. Bridge the two. Wrapped in try/except: st.secrets
+# raises if no secrets.toml exists at all, which is the normal case for a
+# local run using .env instead.
+try:
+    for _key, _val in st.secrets.items():
+        os.environ.setdefault(_key, str(_val))
+except Exception:
+    pass
+
 st.set_page_config(
     page_title="Hisaab — Finfluencer Scorecard",
     page_icon="📊",

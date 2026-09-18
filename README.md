@@ -2,6 +2,8 @@
 
 > **hisaab keeps the receipts.**
 
+**🔴 [Live Demo](https://hisaab.streamlit.app)** — no install needed, just click. _(Replace this URL with your actual Streamlit Community Cloud app URL once deployed — see Deployment below.)_
+
 Every stock tip on YouTube is a timestamped prediction. Hisaab finds each tip in a creator's videos, records the exact second it was said, and grades it against what the stock actually did afterwards — compared to the NIFTY 50. The output is a verifiable scorecard.
 
 ---
@@ -83,6 +85,23 @@ streamlit run app/app.py
 pip install -e ".[dev]"
 pytest tests/ -v
 ```
+
+### Deployment (Streamlit Community Cloud)
+
+The hosted demo above is a free Streamlit Community Cloud app pointed at
+this repo:
+
+1. [share.streamlit.io](https://share.streamlit.io) → **New app** → pick
+   this GitHub repo, branch `main`, main file path `app/app.py`.
+2. In the app's **Settings → Secrets**, paste:
+   ```toml
+   SERPAPI_API_KEY = "your_key"
+   GEMINI_API_KEY = "your_key"
+   ```
+   (`app/app.py` bridges `st.secrets` into `os.environ` on startup, so
+   nothing else needs to change — the same code path as a local `.env`.)
+3. Deploy. Judges can then run a Live audit with no setup on their end;
+   your keys are the only ones spent.
 
 ---
 
