@@ -1,5 +1,10 @@
 # 📊 Hisaab — Grade Indian Finfluencer Stock Tips
 
+[![CI](https://github.com/darshanrajagoli/hisaab/actions/workflows/ci.yml/badge.svg)](https://github.com/darshanrajagoli/hisaab/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](pyproject.toml)
+[![Built with SerpApi](https://img.shields.io/badge/built%20with-SerpApi-000000.svg)](https://serpapi.com)
+
 > **hisaab keeps the receipts.**
 
 **🔴 [Live Demo](https://hisaab-ccb6uxs8tjolxrzvcvpkoc.streamlit.app)** — no install needed, just click.
