@@ -19,28 +19,26 @@ logger = logging.getLogger(__name__)
 def fetch_transcript(
     client: SerpClient,
     video: VideoInfo,
-    prefer_language: str = "hi",
+    prefer_language: str = "en",
 ) -> Optional[list[TranscriptSnippet]]:
     """
     Fetch transcript for a video.
 
-    Tries the preferred language first, then falls back to English.
-    Returns None if no transcript is available.
+    SerpApi's youtube_video_transcript engine returns whichever caption
+    track YouTube generated (often Hindi/Hinglish for these channels
+    regardless of `language_code`) — the param is a hint, not a filter.
+    Returns None if no transcript is available at all.
     """
-    # Try preferred language (Hindi for Indian channels)
     snippets = _try_fetch(client, video.video_id, prefer_language)
     if snippets:
         return snippets
 
-    # Fall back to English
-    if prefer_language != "en":
-        snippets = _try_fetch(client, video.video_id, "en")
-        if snippets:
-            return snippets
+    fallback_language = "hi" if prefer_language != "hi" else "en"
+    snippets = _try_fetch(client, video.video_id, fallback_language)
+    if snippets:
+        return snippets
 
-    # Try without specifying language
-    snippets = _try_fetch(client, video.video_id, None)
-    return snippets
+    return None
 
 
 def _try_fetch(
@@ -50,39 +48,52 @@ def _try_fetch(
 ) -> Optional[list[TranscriptSnippet]]:
     """Attempt to fetch a transcript in a specific language."""
     try:
-        params = {"video_id": video_id, "type": "asr"}
+        params = {"v": video_id}
         if language_code:
-            params["lang"] = language_code
+            params["language_code"] = language_code
 
         result = client.search("youtube_video_transcript", params)
 
-        # Check if we got transcript data
-        transcript_results = result.get("transcript_results", result.get("results", []))
-
-        if not transcript_results:
-            # Try alternate response structures
-            transcript_results = result.get("transcript", [])
+        # Real response key is "transcript"; keep older guesses as fallbacks
+        # in case SerpApi renames the field in the future.
+        transcript_results = (
+            result.get("transcript")
+            or result.get("transcript_results")
+            or result.get("results")
+            or []
+        )
 
         if not transcript_results:
             return None
 
-        snippets = []
+        raw_items = []
         for item in transcript_results:
-            text = item.get("text", item.get("snippet", "")).strip()
+            text = (item.get("snippet") or item.get("text") or "").strip()
             if not text:
                 continue
-
             start_ms = _to_ms(item.get("start_ms", item.get("start", 0)))
-            end_ms = _to_ms(item.get("end_ms", item.get("end", item.get("duration", 0) + start_ms)))
+            raw_items.append((start_ms, text))
 
+        if not raw_items:
+            return None
+
+        raw_items.sort(key=lambda pair: pair[0])
+
+        # The API gives only a start time per snippet, no duration — derive
+        # each snippet's end from the next one's start (last snippet gets a
+        # 4s default tail).
+        snippets = []
+        for idx, (start_ms, text) in enumerate(raw_items):
+            if idx + 1 < len(raw_items):
+                end_ms = raw_items[idx + 1][0]
+            else:
+                end_ms = start_ms + 4000
             snippets.append(TranscriptSnippet(text=text, start_ms=start_ms, end_ms=end_ms))
 
-        if snippets:
-            logger.debug(
-                f"Transcript for {video_id}: {len(snippets)} snippets (lang={language_code})"
-            )
-            return snippets
-        return None
+        logger.debug(
+            f"Transcript for {video_id}: {len(snippets)} snippets (lang={language_code})"
+        )
+        return snippets
 
     except Exception as e:
         logger.debug(f"Transcript fetch failed for {video_id} (lang={language_code}): {e}")

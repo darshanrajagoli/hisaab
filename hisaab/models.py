@@ -167,6 +167,9 @@ class ResolvedTip(VerifiedTip):
     isin: Optional[str] = None
     resolved: bool = False
     resolution_method: str = ""  # alias, fuzzy, llm, google_finance
+    # Set by detect_corporate_actions(), which runs before scoring.
+    corporate_action_flag: bool = False
+    corporate_action_note: str = ""
 
 
 # ── Scored Tip ───────────────────────────────────────────────────────────────
@@ -187,8 +190,6 @@ class ScoredTip(ResolvedTip):
     excess_return: Optional[float] = None
     is_scored: bool = False
     unscored_reason: Optional[UnscoredReason] = None
-    corporate_action_flag: bool = False
-    corporate_action_note: str = ""
     news_explanation: str = ""
     news_source_url: str = ""
 

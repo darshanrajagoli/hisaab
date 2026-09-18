@@ -10,14 +10,23 @@ from __future__ import annotations
 import json
 import logging
 import os
+import time
 from typing import Any, Optional
 
 from google import genai
+from google.genai import errors as genai_errors
 from google.genai import types
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = "gemini-3.6-flash"
+# gemini-3.6-flash's free tier caps at 20 requests/DAY — far too low for a
+# pipeline that makes many calls per audit (classification, extraction per
+# window, verification, disambiguation). gemini-3.1-flash-lite draws from a
+# separate, much larger free quota and is plenty capable for structured
+# extraction tasks like this one.
+DEFAULT_MODEL = "gemini-3.1-flash-lite"
+
+_MAX_RETRIES = 3
 
 _client: Optional[genai.Client] = None
 
@@ -55,12 +64,22 @@ def call_llm(
         temperature=temperature,
         system_instruction=system or None,
     )
-    response = client.models.generate_content(
-        model=model,
-        contents=prompt,
-        config=config,
-    )
-    return response.text
+
+    last_error: Optional[Exception] = None
+    for attempt in range(_MAX_RETRIES):
+        try:
+            response = client.models.generate_content(
+                model=model,
+                contents=prompt,
+                config=config,
+            )
+            return response.text
+        except genai_errors.ServerError as e:
+            # Transient overload (503) — worth a short backoff and retry.
+            last_error = e
+            if attempt < _MAX_RETRIES - 1:
+                time.sleep(2**attempt)
+    raise last_error
 
 
 def call_llm_json(

@@ -122,13 +122,12 @@ class SerpClient:
         """Get video details."""
         return self.search("youtube_video", {"v": video_id})
 
-    def search_youtube_transcript(
-        self, video_id: str, language_code: str = "hi", transcript_type: str = "asr"
-    ) -> dict:
-        """Get video transcript."""
+    def search_youtube_transcript(self, video_id: str, language_code: str = "en") -> dict:
+        """Get video transcript. `language_code` is a hint, not a hard filter —
+        SerpApi returns whatever caption track exists regardless of this value."""
         return self.search(
             "youtube_video_transcript",
-            {"video_id": video_id, "lang": language_code, "type": transcript_type},
+            {"v": video_id, "language_code": language_code},
         )
 
     def search_google_finance(self, ticker: str, window: str = "1Y") -> dict:

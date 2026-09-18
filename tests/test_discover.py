@@ -17,7 +17,7 @@ class TestInputParsing:
     def test_channel_handle_url(self):
         result = parse_channel_input("https://www.youtube.com/@TestChannel")
         assert result["type"] == "channel"
-        assert result["handle"] == "@TestChannel"
+        assert result["channel_id"] == "@TestChannel"
 
     def test_channel_id_url(self):
         result = parse_channel_input("https://www.youtube.com/channel/UCabc123def456")
@@ -27,7 +27,7 @@ class TestInputParsing:
     def test_bare_handle(self):
         result = parse_channel_input("@TestChannel")
         assert result["type"] == "channel"
-        assert result["handle"] == "@TestChannel"
+        assert result["channel_id"] == "@TestChannel"
 
     def test_bare_channel_id(self):
         result = parse_channel_input("UCabc123def456ghi789jkl")
@@ -37,4 +37,4 @@ class TestInputParsing:
     def test_plain_name(self):
         result = parse_channel_input("SomeChannel")
         assert result["type"] == "channel"
-        assert result["handle"] == "@SomeChannel"
+        assert result["channel_id"] == "@SomeChannel"

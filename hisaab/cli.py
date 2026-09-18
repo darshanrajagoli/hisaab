@@ -12,7 +12,15 @@ from __future__ import annotations
 
 import logging
 import os
+import sys
 from typing import Optional
+
+# Windows terminals default stdout/stderr to the cp1252 codepage, which
+# can't encode Rich's unicode glyphs (●, ✓, ✗, etc.) and crashes mid-run.
+if sys.platform == "win32":
+    for _stream in (sys.stdout, sys.stderr):
+        if hasattr(_stream, "reconfigure"):
+            _stream.reconfigure(encoding="utf-8")
 
 import typer
 from dotenv import load_dotenv

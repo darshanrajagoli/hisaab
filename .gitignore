@@ -25,6 +25,8 @@ Thumbs.db
 
 # Data
 *.db
+*.db-shm
+*.db-wal
 !fixtures/demo/*.db
 
 # Virtual environments

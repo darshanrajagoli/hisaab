@@ -115,7 +115,7 @@ Return ONLY the explanation sentence, no other text."""
     try:
         explanation = call_llm(
             prompt,
-            model="gemini-3.6-flash",
+            model="gemini-3.1-flash-lite",
             max_tokens=256,
             temperature=0.0,
         ).strip()

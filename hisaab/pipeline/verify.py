@@ -188,7 +188,7 @@ Is this tip supported by the transcript? Return JSON."""
         return call_llm_json(
             prompt,
             system=system,
-            model="gemini-3.6-flash",
+            model="gemini-3.1-flash-lite",
             max_tokens=512,
         )
     except Exception as e:

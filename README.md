@@ -218,7 +218,7 @@ Only closing prices are used — intraday touches not counted.
 
 - **Python 3.11+** — primary language
 - **SerpApi** (`google-search-results`) — search data backbone
-- **Google Gemini** (`gemini-3.6-flash`, free tier) — transcript extraction and verification
+- **Google Gemini** (`gemini-3.1-flash-lite`, free tier) — transcript extraction and verification
 - **Pydantic v2** — schema validation
 - **pandas + numpy** — price series processing
 - **scipy** — statistical tests

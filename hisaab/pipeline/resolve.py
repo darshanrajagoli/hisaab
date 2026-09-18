@@ -138,7 +138,7 @@ If none match, return {{"symbol": null}}"""
         try:
             result = call_llm_json(
                 prompt,
-                model="gemini-3.6-flash",
+                model="gemini-3.1-flash-lite",
                 max_tokens=128,
             )
             symbol = result.get("symbol")

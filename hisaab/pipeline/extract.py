@@ -17,6 +17,37 @@ logger = logging.getLogger(__name__)
 
 PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "extract_tips.txt"
 
+# The LLM mostly follows the prompt's exact enum values, but occasionally
+# drifts to a plausible synonym (e.g. "SELL" instead of "SHORT"). Coerce
+# known synonyms instead of dropping an otherwise-valid tip.
+_DIRECTION_SYNONYMS = {
+    "SELL": "SHORT",
+    "SHORT_SELL": "SHORT",
+    "BUY": "LONG",
+    "EXIT": "AVOID",
+    "STAY_AWAY": "AVOID",
+}
+_INSTRUMENT_SYNONYMS = {
+    "COMMODITY": "OTHER",
+    "OPTIONS": "FNO",
+    "FUTURES": "FNO",
+    "STOCK": "EQUITY",
+    "SHARE": "EQUITY",
+}
+_HORIZON_SYNONYMS = {
+    "SHORT_TERM": "SWING",
+    "MEDIUM_TERM": "POSITIONAL",
+    "LONG": "LONG_TERM",
+}
+
+
+def _normalize_enum(value, synonyms: dict[str, str], default: str) -> str:
+    """Map an LLM-produced string onto a known enum value, or fall back to default."""
+    if not value:
+        return default
+    value = str(value).strip().upper().replace(" ", "_")
+    return synonyms.get(value, value)
+
 
 def _load_system_prompt() -> str:
     """Load the extraction system prompt from file."""
@@ -58,10 +89,16 @@ Extract all actionable stock tips. Return a JSON array."""
             item.setdefault("video_id", window.video_id)
             item.setdefault("start_ms", window.start_ms)
             item.setdefault("end_ms", window.end_ms)
-            item.setdefault("instrument_type", "EQUITY")
-            item.setdefault("horizon_bucket", "UNSPECIFIED")
             item.setdefault("conviction_flags", [])
             item.setdefault("extractor_confidence", 0.5)
+
+            item["direction"] = _normalize_enum(item.get("direction"), _DIRECTION_SYNONYMS, "LONG")
+            item["instrument_type"] = _normalize_enum(
+                item.get("instrument_type"), _INSTRUMENT_SYNONYMS, "EQUITY"
+            )
+            item["horizon_bucket"] = _normalize_enum(
+                item.get("horizon_bucket"), _HORIZON_SYNONYMS, "UNSPECIFIED"
+            )
 
             tip = ExtractedTip(**item)
             tips.append(tip)
