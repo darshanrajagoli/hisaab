@@ -31,6 +31,12 @@ st.set_page_config(
 
 st.sidebar.title("📊 Hisaab")
 st.sidebar.caption("_hisaab keeps the receipts_")
+st.sidebar.info(
+    "⚠️ Educational only — not investment advice. Grades what a creator "
+    "said against what happened; doesn't imply intent or track record "
+    "beyond the videos this tool actually sampled.",
+    icon="⚠️",
+)
 
 page = st.sidebar.radio(
     "Navigate",
@@ -138,8 +144,20 @@ if page == "🏠 Home":
             )
         except Exception as e:
             status.update(label="❌ Error", state="error")
-            st.error(f"Audit failed: {e}")
-            st.exception(e)
+            from hisaab.llm import ReplayFixtureMissing
+
+            if isinstance(e, ReplayFixtureMissing):
+                st.error(
+                    "Replay mode stopped: no cached LLM response for this input. "
+                    "The bundled fixtures only cover the SerpApi side (YouTube/"
+                    "Finance/News) — an LLM (Gemini) response cache isn't shipped "
+                    "yet. Switch Mode to Live and provide GEMINI_API_KEY/"
+                    "SERPAPI_API_KEY in .env to run this for real."
+                )
+            else:
+                st.error(f"Audit failed: {e}")
+                with st.expander("Full error details"):
+                    st.exception(e)
 
 elif page == "📊 Scorecard":
     st.title("📊 Scorecard")
@@ -199,9 +217,30 @@ elif page == "📊 Scorecard":
             )
     with col4:
         if stats.binomial_verdict:
-            st.metric("Statistical Verdict", stats.binomial_verdict[:30])
+            short = (
+                stats.binomial_verdict
+                if len(stats.binomial_verdict) <= 30
+                else stats.binomial_verdict[:27] + "..."
+            )
+            st.metric("Statistical Verdict", short, help=stats.binomial_verdict)
 
     st.divider()
+
+    # Conviction analysis — promoted above the P&L chart: "do 'guaranteed
+    # multibagger' calls actually perform worse than ordinary ones?" is
+    # one of the most novel, quotable findings this tool can produce.
+    if stats.conviction_count > 0:
+        st.subheader("🎯 Conviction Analysis — do bold claims hold up?")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Conviction Calls", stats.conviction_count)
+        with col2:
+            if stats.conviction_hit_rate is not None:
+                st.metric("Conviction Hit Rate", f"{stats.conviction_hit_rate:.1%}")
+        with col3:
+            if stats.non_conviction_hit_rate is not None:
+                st.metric("Regular Hit Rate", f"{stats.non_conviction_hit_rate:.1%}")
+        st.divider()
 
     # Simulation chart
     if stats.simulation_pnl is not None:
@@ -233,19 +272,6 @@ elif page == "📊 Scorecard":
                 template="plotly_white",
             )
             st.plotly_chart(fig, use_container_width=True)
-
-    # Conviction analysis
-    if stats.conviction_count > 0:
-        st.subheader("Conviction Analysis")
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("Conviction Calls", stats.conviction_count)
-        with col2:
-            if stats.conviction_hit_rate is not None:
-                st.metric("Conviction Hit Rate", f"{stats.conviction_hit_rate:.1%}")
-        with col3:
-            if stats.non_conviction_hit_rate is not None:
-                st.metric("Regular Hit Rate", f"{stats.non_conviction_hit_rate:.1%}")
 
     # Tips table
     st.subheader("All Tips")
@@ -294,6 +320,23 @@ elif page == "🔍 Tip Detail":
     st.title("🔍 Tip Detail")
 
     run = st.session_state.get("latest_run")
+    if not run:
+        # Same store fallback as Scorecard — without this, Tip Detail dead-
+        # ends on a fresh session even when past runs are on disk, unless
+        # the user happens to visit Scorecard first (whose fallback is what
+        # actually populates session_state as a side effect).
+        from hisaab.store import HisaabStore
+        store = HisaabStore()
+        channels = store.list_channels()
+        if channels:
+            selected = st.selectbox(
+                "Select channel", [c["channel_title"] for c in channels], key="tip_detail_channel"
+            )
+            ch = next(c for c in channels if c["channel_title"] == selected)
+            run = store.get_latest_run(ch["channel_id"])
+            if run:
+                st.session_state["latest_run"] = run
+
     if not run or not run.tips:
         st.info("No tips to display. Run an audit first.")
         st.stop()
@@ -363,18 +406,23 @@ elif page == "🔍 Tip Detail":
             st.metric("Excess Return", excess_str)
 
         # Price chart — the actual daily close path, not just entry/exit dots.
-        # Pulled live from Google Finance (a cache hit if this ticker was
-        # already fetched during the audit, so this costs nothing extra).
+        # Uses the SAME window-selection logic as the audit itself
+        # (prices._choose_window) so this hits the audit's own cache entry
+        # instead of silently issuing a fresh live call with a hardcoded
+        # window that misses for any tip older than ~6 months.
         if tip.entry_price and tip.exit_price and tip.ticker:
             import plotly.graph_objects as go
 
-            from hisaab.pipeline.prices import _parse_price_series
+            from hisaab.pipeline.prices import _choose_window, _parse_price_series
             from hisaab.serp.client import SerpClient
 
             series = None
             try:
+                chart_window = _choose_window([tip], f"{tip.ticker}:NSE")
                 price_client = SerpClient(mode=os.environ.get("HISAAB_MODE", "live"))
-                result = price_client.search_google_finance(f"{tip.ticker}:NSE", window="6M")
+                result = price_client.search_google_finance(
+                    f"{tip.ticker}:NSE", window=chart_window
+                )
                 series = _parse_price_series(result)
             except Exception:
                 series = None
@@ -446,9 +494,19 @@ elif page == "🔍 Tip Detail":
             if tip.news_source_url:
                 st.markdown(f"[Source]({tip.news_source_url})")
 
-        # Conviction flags
-        if tip.conviction_flags:
-            st.warning(f"Conviction claims: {', '.join(tip.conviction_flags)}")
+        # Conviction / disclosure flags
+        flags = set(tip.conviction_flags)
+        hedge_flags = flags & {"DISCLAIMED", "PERSONAL_POSITION"}
+        conviction_only = flags - hedge_flags
+        if "DISCLAIMED" in flags:
+            st.info(
+                "🛡️ The creator hedged this call in the same breath "
+                "(e.g. \"not a recommendation, do your own research\")."
+            )
+        if "PERSONAL_POSITION" in flags:
+            st.info("👤 Disclosed as the creator's own position, not direct advice to viewers.")
+        if conviction_only:
+            st.warning(f"Conviction claims: {', '.join(sorted(conviction_only))}")
 
 elif page == "⚖️ Compare":
     st.title("⚖️ Compare Channels")

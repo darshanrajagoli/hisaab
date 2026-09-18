@@ -109,10 +109,20 @@ def compute_stats(
         cs.hit_rate_creator_ci_high = ci_high
 
     # ── Conviction analysis ──
+    # "DISCLAIMED"/"PERSONAL_POSITION" are hedge/disclosure metadata, not
+    # hype — a tip flagged only as DISCLAIMED must not count as a
+    # "guaranteed multibagger"-style conviction call, or it dilutes the
+    # very signal this analysis exists to measure.
+    _HEDGE_FLAGS = {"DISCLAIMED", "PERSONAL_POSITION"}
 
-    conviction_tips = [t for t in scored if t.conviction_flags and t.excess_return is not None]
+    def _is_conviction_call(t: ScoredTip) -> bool:
+        return bool(set(t.conviction_flags) - _HEDGE_FLAGS)
+
+    conviction_tips = [
+        t for t in scored if _is_conviction_call(t) and t.excess_return is not None
+    ]
     non_conviction_tips = [
-        t for t in scored if not t.conviction_flags and t.excess_return is not None
+        t for t in scored if not _is_conviction_call(t) and t.excess_return is not None
     ]
     cs.conviction_count = len(conviction_tips)
 

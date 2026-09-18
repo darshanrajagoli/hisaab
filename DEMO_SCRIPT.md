@@ -40,9 +40,11 @@ Quick scroll-through. Say: "Every score is deterministic Python, not the LLM —
 LLM only reads, Python judges. And the limitations are stated up front, not hidden."
 
 ## 6. Close (15s)
-> "Built solo for the SerpApi India Hackathon, five SerpApi engines doing real work,
-> replay mode so you can run this yourself with zero API keys. Hisaab keeps the
-> receipts."
+> "Built solo for the SerpApi India Hackathon, five SerpApi engines doing real work.
+> Hisaab keeps the receipts."
+
+(Don't claim "zero API keys" on camera unless you've verified an LLM fixture cache
+is actually shipped by the time you record — see the Replay Mode note in README.md.)
 
 ---
 

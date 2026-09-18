@@ -11,6 +11,7 @@ import logging
 from typing import Optional
 
 from hisaab.models import TranscriptSnippet, VideoInfo
+from hisaab.serp.budget import BudgetExceeded
 from hisaab.serp.client import SerpClient
 
 logger = logging.getLogger(__name__)
@@ -96,6 +97,12 @@ def _try_fetch(
         )
         return snippets
 
+    except BudgetExceeded as e:
+        # A hidden-at-DEBUG budget skip here reads, in the funnel, as "this
+        # creator barely gave any tips" rather than "the run ran out of
+        # quota" — make it visible at the level normal INFO logging shows.
+        logger.warning(f"Skipping transcript for {video_id}: run/monthly budget exceeded ({e})")
+        return None
     except Exception as e:
         logger.debug(f"Transcript fetch failed for {video_id} (lang={language_code}): {e}")
         return None

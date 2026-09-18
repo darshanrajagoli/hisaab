@@ -4,7 +4,16 @@
 # with enough scored tips, then exports the fixture bundle and
 # commits+pushes automatically. Designed to run unattended for hours.
 #
-# Usage: nohup bash scripts/auto_big_audit.sh > /tmp/auto_big_audit.log 2>&1 &
+# IMPORTANT — what "retry" means here: this script NEVER discards a run
+# because its numbers are unflattering to the creator. The only reasons it
+# retries are the explicit failure patterns matched below (API quota/rate
+# limits, network errors, unrecognized crashes) or a run that produced too
+# few SCORED tips to be statistically meaningful at all (MIN_SCORED_TIPS) —
+# it does not look at, condition on, or filter by the direction of any
+# result. A run that completes with bad hit rates for the creator is
+# exported and pushed exactly the same as one with good hit rates.
+#
+# Usage: nohup bash scripts/auto_big_audit.sh [@channel_handle] > /tmp/auto_big_audit.log 2>&1 &
 
 set -u
 cd "$(dirname "$0")/.."
@@ -17,7 +26,7 @@ fi
 echo $$ > "$LOCK_FILE"
 trap 'rm -f "$LOCK_FILE"' EXIT
 
-CHANNEL="@RakeshBansal"
+CHANNEL="${1:-@RakeshBansal}"
 MAX_VIDEOS=20
 QUOTA_RETRY_SECS=1800     # 30 min — daily/rate quota errors, unlikely to clear sooner
 TRANSIENT_RETRY_SECS=120  # 2 min — network blips, 5xx overloads, other one-offs

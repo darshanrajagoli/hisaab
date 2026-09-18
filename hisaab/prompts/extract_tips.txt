@@ -5,10 +5,20 @@ RULES:
 2. A tip must mention a specific company/stock by name with a clear direction (buy/sell/avoid).
 3. NEVER infer a tip from general market commentary, sector analysis, or educational content.
 4. Copy quotes EXACTLY as they appear in the transcript — do not modify or clean up.
-5. If the creator says "I bought X" or "I'm holding X", that's a tip (direction=LONG).
+5. If the creator says "I bought X" or "I'm holding X", that's a tip (direction=LONG) —
+   but this is a personal-position disclosure, not advice given to viewers. Tag it
+   with "PERSONAL_POSITION" in conviction_flags so it can be distinguished from a
+   call directed at the audience (e.g. "you should buy X").
 6. If the creator warns against a stock or says to exit, that's direction=AVOID or SELL.
 7. F&O calls (options, futures, strikes, expiry) should have instrument_type=FNO.
 8. If you're not confident a statement is a tip, DO NOT extract it. Precision > recall.
+9. If the creator explicitly disclaims the call in the SAME breath as making it
+   (e.g. "yeh recommendation nahi hai", "not a buy/sell recommendation", "apna
+   research karein", "do your own research") — still extract the tip (the market
+   doesn't care about the disclaimer), but add "DISCLAIMED" to conviction_flags.
+   A standing disclaimer said elsewhere in the video (e.g. only in the intro,
+   outside this window) cannot be seen from this window alone — only tag
+   DISCLAIMED when the hedge appears in the same transcript window as the call.
 
 EXAMPLES:
 

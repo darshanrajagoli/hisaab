@@ -29,7 +29,7 @@ Channel URL → Discover Videos → Classify → Select Top N
     → Fetch Prices → Score Deterministically → Statistics → Scorecard
 ```
 
-**The LLM reads. Python judges.** The LLM's only job is turning messy Hinglish speech into structured tip data. Every number on the scorecard — returns, hit rates, confidence intervals, p-values — comes from deterministic Python code that can be audited and reproduced.
+**The LLM reads. Python judges.** Every number on the scorecard — returns, hit rates, confidence intervals, p-values — comes from deterministic Python code that can be audited and reproduced; the LLM never touches that arithmetic. It's still upstream of the sample, though: the LLM also decides which videos look tip-worthy, extracts what counts as a tip in the first place, and cross-checks tips against the transcript — so its judgment shapes *what gets scored*, even though it never computes *the score itself*.
 
 ---
 
@@ -264,6 +264,14 @@ Only closing prices are used — intraday touches not counted.
   of their original window and a fresh replay run can start missing
   fixtures it used to hit — the bundle isn't permanently reproducible,
   it needs periodic re-export
+- A creator saying "I bought X" is treated as a scoreable LONG tip but
+  flagged `PERSONAL_POSITION` — it's disclosure of a personal holding, not
+  advice given to viewers, and the two are graded identically here. A tip
+  hedged in the same breath ("not a recommendation, do your own research")
+  is flagged `DISCLAIMED` but still scored — the market outcome doesn't
+  care about the disclaimer, but a standing disclaimer said only once,
+  elsewhere in the video (e.g. the intro), can't be detected at all, since
+  extraction runs per transcript window
 
 ---
 
