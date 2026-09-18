@@ -12,18 +12,21 @@ import logging
 import os
 from typing import Any, Optional
 
-from anthropic import Anthropic
+from google import genai
+from google.genai import types
 
 logger = logging.getLogger(__name__)
 
-_client: Optional[Anthropic] = None
+DEFAULT_MODEL = "gemini-3.6-flash"
+
+_client: Optional[genai.Client] = None
 
 
-def get_client() -> Anthropic:
-    """Get or create the Anthropic client."""
+def get_client() -> genai.Client:
+    """Get or create the Gemini client."""
     global _client
     if _client is None:
-        _client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY", ""))
+        _client = genai.Client(api_key=os.getenv("GEMINI_API_KEY", ""))
     return _client
 
 
@@ -41,30 +44,29 @@ def extract_json(text: str) -> Any:
 def call_llm(
     prompt: str,
     system: str = "",
-    model: str = "claude-sonnet-4-5-20250514",
+    model: str = DEFAULT_MODEL,
     max_tokens: int = 4096,
     temperature: float = 0.0,
 ) -> str:
     """Make a single LLM call and return the text response."""
     client = get_client()
-    messages = [{"role": "user", "content": prompt}]
-    kwargs: dict[str, Any] = {
-        "model": model,
-        "max_tokens": max_tokens,
-        "messages": messages,
-        "temperature": temperature,
-    }
-    if system:
-        kwargs["system"] = system
-
-    response = client.messages.create(**kwargs)
-    return response.content[0].text
+    config = types.GenerateContentConfig(
+        max_output_tokens=max_tokens,
+        temperature=temperature,
+        system_instruction=system or None,
+    )
+    response = client.models.generate_content(
+        model=model,
+        contents=prompt,
+        config=config,
+    )
+    return response.text
 
 
 def call_llm_json(
     prompt: str,
     system: str = "",
-    model: str = "claude-sonnet-4-5-20250514",
+    model: str = DEFAULT_MODEL,
     max_tokens: int = 4096,
 ) -> Any:
     """Make an LLM call expecting JSON output."""
@@ -76,7 +78,7 @@ def classify_video_titles(titles: list[dict[str, str]]) -> list[dict[str, str]]:
     """
     Classify video titles into tip categories.
 
-    Uses Haiku for cost efficiency.
+    Uses Gemini Flash for cost efficiency (free tier).
     Returns list of {video_id, title, classification}.
     """
     system = (
@@ -98,7 +100,7 @@ Return ONLY the JSON array, no other text."""
     result = call_llm_json(
         prompt,
         system=system,
-        model="claude-haiku-4-5-20251001",
+        model=DEFAULT_MODEL,
         max_tokens=2048,
     )
     return result

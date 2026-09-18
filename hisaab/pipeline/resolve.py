@@ -41,7 +41,7 @@ class TickerResolver:
         """Load NSE equity list and aliases."""
         # Load NSE equities
         if NSE_CSV.exists():
-            with open(NSE_CSV) as f:
+            with open(NSE_CSV, encoding="utf-8") as f:
                 reader = csv.DictReader(f)
                 for row in reader:
                     symbol = row.get("SYMBOL", row.get("symbol", "")).strip()
@@ -58,7 +58,7 @@ class TickerResolver:
 
         # Load aliases
         if ALIASES_YAML.exists():
-            with open(ALIASES_YAML) as f:
+            with open(ALIASES_YAML, encoding="utf-8") as f:
                 aliases_raw = yaml.safe_load(f) or {}
             for symbol, alias_list in aliases_raw.items():
                 symbol = symbol.upper()
@@ -138,7 +138,7 @@ If none match, return {{"symbol": null}}"""
         try:
             result = call_llm_json(
                 prompt,
-                model="claude-haiku-4-5-20251001",
+                model="gemini-3.6-flash",
                 max_tokens=128,
             )
             symbol = result.get("symbol")

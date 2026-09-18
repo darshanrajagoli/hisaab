@@ -51,7 +51,7 @@ pip install -e .
 cp .env.example .env
 # Edit .env with your API keys:
 # SERPAPI_API_KEY=your_key
-# ANTHROPIC_API_KEY=your_key
+# GEMINI_API_KEY=your_key
 
 # CLI
 hisaab audit @channel_handle
@@ -218,7 +218,7 @@ Only closing prices are used — intraday touches not counted.
 
 - **Python 3.11+** — primary language
 - **SerpApi** (`google-search-results`) — search data backbone
-- **Anthropic Claude** — transcript extraction and verification
+- **Google Gemini** (`gemini-3.6-flash`, free tier) — transcript extraction and verification
 - **Pydantic v2** — schema validation
 - **pandas + numpy** — price series processing
 - **scipy** — statistical tests
