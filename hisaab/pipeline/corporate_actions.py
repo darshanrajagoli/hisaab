@@ -13,7 +13,7 @@ from datetime import timedelta
 
 import pandas as pd
 
-from hisaab.models import ResolvedTip
+from hisaab.models import HORIZON_DEFAULTS_TRADING_DAYS, ResolvedTip
 
 logger = logging.getLogger(__name__)
 
@@ -40,9 +40,11 @@ def detect_corporate_actions(
         if series is None or series.empty:
             continue
 
-        # Check the price series during the tip's horizon window
+        # Check the price series during the tip's horizon window.
+        # This runs before scoring, so `horizon_days` isn't set on the tip
+        # yet — derive it the same way score.py's _get_horizon_days() does.
         start = tip.publish_date
-        horizon_days = tip.horizon_days or 60
+        horizon_days = HORIZON_DEFAULTS_TRADING_DAYS.get(tip.horizon_bucket, 60)
         end = start + timedelta(days=int(horizon_days * 1.5))
 
         window = series[(series["date"] >= start) & (series["date"] <= end)].copy()

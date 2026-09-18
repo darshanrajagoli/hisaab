@@ -41,6 +41,24 @@ _HORIZON_SYNONYMS = {
 }
 
 
+_CONFIDENCE_WORDS = {"HIGH": 0.9, "MEDIUM": 0.6, "MED": 0.6, "LOW": 0.3}
+
+
+def _normalize_confidence(value) -> float:
+    """The LLM occasionally returns a word ("HIGH") instead of a 0-1 float."""
+    if isinstance(value, str):
+        word = value.strip().upper()
+        if word in _CONFIDENCE_WORDS:
+            return _CONFIDENCE_WORDS[word]
+        try:
+            return float(value)
+        except ValueError:
+            return 0.5
+    if isinstance(value, (int, float)):
+        return float(value)
+    return 0.5
+
+
 def _normalize_enum(value, synonyms: dict[str, str], default: str) -> str:
     """Map an LLM-produced string onto a known enum value, or fall back to default."""
     if not value:
@@ -102,6 +120,7 @@ Extract all actionable stock tips. Return a JSON array."""
             item["horizon_bucket"] = _normalize_enum(
                 item.get("horizon_bucket"), _HORIZON_SYNONYMS, "UNSPECIFIED"
             )
+            item["extractor_confidence"] = _normalize_confidence(item.get("extractor_confidence"))
 
             tip = ExtractedTip(**item)
             tips.append(tip)
