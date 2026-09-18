@@ -75,11 +75,13 @@ SerpApi is the **backbone** of Hisaab. Without it, there is no transcript, no ti
 
 | Engine | Parameters Used | Response Fields Consumed | Why It's Essential | Calls/Audit |
 |--------|----------------|------------------------|-------------------|-------------|
-| `youtube_channel` | `channel_id`, `search_query`, `handle` | `videos[]` (video_id, title) | Discovers tip videos via within-channel search with tip keywords | ~2 |
-| `youtube_video` | `v` (video_id) | `published_date`, `description`, `views` | Gets exact publish date — the timestamp that anchors every trade | ~10 |
-| `youtube_video_transcript` | `video_id`, `lang`, `type=asr` | `transcript_results[]` (text, start_ms, end_ms) | **Core engine.** Extracts the spoken words + millisecond timestamps. This is where tips live. | ~10 |
-| `google_finance` | `q` (ticker:NSE), `window` | `graph[]` (date, price) | Price history to score every tip. One call per ticker, not per tip. | ~10–12 |
-| `google_news` | `q` (company + dates), `gl=in` | `news_results[]` (title, snippet, link) | Explains the top wins and losses — turns numbers into stories | ~3–6 |
+| `youtube_channel` | `channel_id` (accepts `@handle` directly), `search_query` | `search_results[]` (`type=="video"`: video_id, title, extracted_views, published_date), `channel_results` (external_id, title, handle) | Discovers tip videos via within-channel search with tip keywords | ~2 |
+| `youtube_video` | `v` (video_id) | `title`, `channel`, `published_date`, `description`, `extracted_views` | Gets exact publish date — the timestamp that anchors every trade | ~1 per selected video |
+| `youtube_video_transcript` | `v` (video_id), `language_code` | `transcript[]` (`snippet`, `start_ms`) | **Core engine.** Extracts the spoken words + millisecond timestamps. This is where tips live. | ~1 per selected video |
+| `google_finance` | `q` (ticker:NSE), `window`, `gl=in` | `graph[]` (price, date, volume), `summary` | Price history to score every tip. One call per unique ticker, not per tip. | ~1 per unique ticker + 1 for NIFTY |
+| `google_news` | `q` (company name + "stock"), `gl=in` | `news_results[]` (title, source, link, date) | Explains the top wins and losses — turns numbers into stories | ~3–6 |
+
+Every field mapping above was verified against real, live SerpApi responses during development — not assumed from docs. See commit history for the specific mismatches this caught (e.g. `youtube_channel`'s video list actually lives in `search_results` filtered by type, not a `videos` key; transcript snippets carry no end time and had to be derived from the next snippet's start).
 
 ### Caching & Budget
 
