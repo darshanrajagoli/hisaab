@@ -40,6 +40,18 @@ while [ "$attempt" -lt "$MAX_ATTEMPTS" ]; do
         scored=$(grep -oE "Scoring: [0-9]+ scored" "$log" | grep -oE "[0-9]+" | head -1)
         scored=${scored:-0}
         echo "Run succeeded with ${scored} scored tips."
+
+        # extract.py fails OPEN on a per-window LLM error (catches the
+        # exception, logs a warning, returns []) so a run can exit 0 with
+        # zero tips while actually being fully quota-exhausted throughout —
+        # that looked like "success, just not enough data yet" and retried
+        # every 2 min forever, never backing off, without ever recovering.
+        if grep -qiE "$QUOTA_PATTERN" "$log"; then
+            echo "Exit 0 but quota errors were swallowed during extraction — sleeping ${QUOTA_RETRY_SECS}s"
+            sleep "$QUOTA_RETRY_SECS"
+            continue
+        fi
+
         consecutive_transient=0
 
         if [ "$scored" -lt "$MIN_SCORED_TIPS" ]; then
