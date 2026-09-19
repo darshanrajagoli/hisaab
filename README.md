@@ -59,15 +59,14 @@ hisaab audit @RakeshBansal --replay demo
 streamlit run app/app.py
 ```
 
-**Current limitation:** the fixture bundle covers the five SerpApi engines
-(YouTube, Google Finance, Google News) but does not yet ship a cached set
-of LLM (Gemini) responses — that half of replay mode still needs a
-successful live run to populate. Right now a fresh clone's replay run will
-fail loudly with `ReplayFixtureMissing` at the tip-extraction stage rather
-than silently returning an empty scorecard (that loud failure is
-deliberate — see Limitations). Live mode with your own `GEMINI_API_KEY`
-and `SERPAPI_API_KEY` is the reliable path until an LLM fixture cache
-ships.
+The bundle covers both halves of a real run: the SerpApi engines (YouTube,
+Google Finance, Google News) and a cached set of LLM (Gemini) responses,
+recorded from a real `@RakeshBansal` audit. Replay mode reproduces that
+exact audit — scored tips, stats, and all — with zero API keys and zero
+network calls. A different channel, or more videos than the bundle
+recorded, still needs a live run and will fail loudly with
+`ReplayFixtureMissing` rather than silently returning an empty scorecard
+(that loud failure is deliberate — see Limitations).
 
 ### Live Mode
 

@@ -39,20 +39,43 @@ class ReplayFixtureMissing(RuntimeError):
 # responses are cached, which burns through the daily cap on repeat runs of
 # the same channel/videos. This cache makes identical (prompt, model, temp)
 # calls free on replay.
-_LLM_CACHE_PATH = Path(os.getenv("HISAAB_LLM_CACHE_DB", "hisaab_llm_cache.db"))
+#
+# In replay mode there's no live API to fall back on, so lookups go against
+# the read-only bundle shipped in fixtures/<bundle>/llm_cache.db instead of
+# the local (gitignored) working cache — that's what lets `--replay demo`
+# reproduce a full audit with zero API keys on a machine that's never made a
+# live call.
+_FIXTURES_ROOT = Path(__file__).parent.parent / "fixtures"
+
+
+def _llm_cache_path() -> Path:
+    """Resolved lazily (not at import time) since HISAAB_MODE is set by the
+    CLI/app after this module is already imported."""
+    override = os.getenv("HISAAB_LLM_CACHE_DB")
+    if override:
+        return Path(override)
+    if os.getenv("HISAAB_MODE") == "replay":
+        bundle = os.getenv("HISAAB_REPLAY_BUNDLE", "demo")
+        return _FIXTURES_ROOT / bundle / "llm_cache.db"
+    return Path("hisaab_llm_cache.db")
+
+
 _llm_cache_conn: Optional[sqlite3.Connection] = None
+_llm_cache_conn_path: Optional[Path] = None
 
 
 def _get_llm_cache_conn() -> sqlite3.Connection:
-    global _llm_cache_conn
-    if _llm_cache_conn is None:
-        _llm_cache_conn = sqlite3.connect(str(_LLM_CACHE_PATH))
+    global _llm_cache_conn, _llm_cache_conn_path
+    path = _llm_cache_path()
+    if _llm_cache_conn is None or _llm_cache_conn_path != path:
+        _llm_cache_conn = sqlite3.connect(str(path))
         _llm_cache_conn.execute("PRAGMA journal_mode=WAL")
         _llm_cache_conn.execute(
             "CREATE TABLE IF NOT EXISTS llm_cache ("
             "cache_key TEXT PRIMARY KEY, response TEXT NOT NULL)"
         )
         _llm_cache_conn.commit()
+        _llm_cache_conn_path = path
     return _llm_cache_conn
 
 

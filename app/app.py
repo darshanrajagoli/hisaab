@@ -161,9 +161,9 @@ if page == "🏠 Home":
             if isinstance(e, ReplayFixtureMissing):
                 st.error(
                     "Replay mode stopped: no cached LLM response for this input. "
-                    "The bundled fixtures only cover the SerpApi side (YouTube/"
-                    "Finance/News) — an LLM (Gemini) response cache isn't shipped "
-                    "yet. Switch Mode to Live and provide GEMINI_API_KEY/"
+                    "The bundled fixtures only cover the exact channel/videos "
+                    "recorded into fixtures/demo — a different channel needs a "
+                    "live run. Switch Mode to Live and provide GEMINI_API_KEY/"
                     "SERPAPI_API_KEY in .env to run this for real."
                 )
             else:
