@@ -210,10 +210,17 @@ Videos:
 Return a JSON array of objects with "video_id", "title", and "classification" fields.
 Return ONLY the JSON array, no other text."""
 
+    # A fixed 2048-token cap silently truncated the JSON array mid-object on
+    # channels with enough videos (~40+ titles), producing invalid JSON that
+    # fell through to the heuristic classifier instead of raising — nobody
+    # noticed because the fallback still "worked", just non-deterministically.
+    # Scale with the number of titles instead of guessing a fixed ceiling.
+    max_tokens = max(2048, 120 * len(titles) + 512)
+
     result = call_llm_json(
         prompt,
         system=system,
         model=DEFAULT_MODEL,
-        max_tokens=2048,
+        max_tokens=max_tokens,
     )
     return result
