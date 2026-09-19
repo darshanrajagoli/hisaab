@@ -77,7 +77,12 @@ def _normalize_enum(value, synonyms: dict[str, str], default: str) -> str:
 def _load_system_prompt() -> str:
     """Load the extraction system prompt from file."""
     if PROMPT_PATH.exists():
-        return PROMPT_PATH.read_text()
+        # Explicit encoding matters: the prompt has Hinglish/Devanagari
+        # few-shot examples, and Path.read_text() without one falls back to
+        # the platform's preferred encoding (cp1252 on Windows, not UTF-8),
+        # silently mojibake-decoding it — which also changes the LLM cache
+        # key for an otherwise-identical prompt across platforms.
+        return PROMPT_PATH.read_text(encoding="utf-8")
     return "Extract stock tips from the transcript. Return a JSON array."
 
 

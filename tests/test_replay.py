@@ -58,6 +58,33 @@ def test_replay_mode_llm_call_fails_loud_not_silent(monkeypatch):
         call_llm(unique_prompt, max_tokens=8)
 
 
+def test_prompt_files_decode_as_utf8_not_platform_default():
+    """Regression test for a real cross-platform bug: _load_system_prompt()
+    and verify's prompt loader used to call Path.read_text() with no
+    explicit encoding. That defaults to the platform's preferred encoding
+    (cp1252 on Windows, not UTF-8) rather than the file's actual UTF-8
+    encoding — the prompts contain Hinglish/Devanagari few-shot examples,
+    so this silently mojibake-decoded them on Windows.
+
+    That's not just cosmetic: the LLM cache key hashes the decoded prompt
+    string, so a prompt recorded on Windows (mojibake) got a different key
+    than the same logical prompt read on Linux CI (correct UTF-8) — every
+    replay lookup for that prompt missed on CI despite the bundle "having"
+    the response, which is exactly how the bug that motivated this test
+    was discovered. Assert against a known-good UTF-8 read directly,
+    rather than just checking the loaders don't crash, so a reintroduced
+    encoding-less read_text() call fails this test even on a machine whose
+    default encoding happens to already be UTF-8.
+    """
+    from hisaab.pipeline import extract, verify
+
+    expected_extract = extract.PROMPT_PATH.read_bytes().decode("utf-8")
+    assert extract._load_system_prompt() == expected_extract
+
+    expected_verify = verify.VERIFY_PROMPT_PATH.read_bytes().decode("utf-8")
+    assert verify._load_system_prompt() == expected_verify
+
+
 def test_llm_cache_bundle_is_not_empty():
     """fixtures/demo/llm_cache.db must exist and have rows, or replay-mode
     extraction/verification/resolution has nothing to serve."""
@@ -97,33 +124,9 @@ def test_full_audit_replay_produces_tips(monkeypatch, tmp_path, caplog):
     monkeypatch.delenv("HISAAB_LLM_CACHE_DB", raising=False)
     monkeypatch.setenv("HISAAB_MODE", "replay")
 
-    import hisaab.llm as llm_module
     from hisaab.pipeline.orchestrator import run_audit
     from hisaab.serp.cache import SerpCache
     from hisaab.serp.client import SerpClient
-
-    # Diagnostic: on a miss, report the exact cache key we computed and
-    # whether that key exists anywhere in the shipped bundle, plus how many
-    # keys the bundle actually has — narrows "wrong key computed" vs
-    # "bundle genuinely incomplete" without guessing.
-    _orig_cache_key = llm_module._llm_cache_key
-
-    def _logging_cache_key(model, system, prompt, temperature):
-        key = _orig_cache_key(model, system, prompt, temperature)
-        conn = llm_module._get_llm_cache_conn()
-        exists = conn.execute(
-            "SELECT 1 FROM llm_cache WHERE cache_key = ?", (key,)
-        ).fetchone()
-        total = conn.execute("SELECT COUNT(*) FROM llm_cache").fetchone()[0]
-        if not exists:
-            print(
-                f"CACHE MISS key={key} model={model!r} total_bundle_rows={total} "
-                f"prompt_len={len(prompt)} system_len={len(system)} "
-                f"prompt_head={prompt[:120]!r}"
-            )
-        return key
-
-    monkeypatch.setattr(llm_module, "_llm_cache_key", _logging_cache_key)
 
     # Isolate the SerpApi budget-tracking DB from the developer's real
     # local hisaab_cache.db — replay mode itself reads fixtures, not this,

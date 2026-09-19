@@ -27,7 +27,7 @@ class FixtureStore:
         """Build an index of available fixtures by cache key."""
         index_path = self.fixtures_dir / "index.json"
         if index_path.exists():
-            with open(index_path) as f:
+            with open(index_path, encoding="utf-8") as f:
                 raw = json.load(f)
             for key, filename in raw.items():
                 self._index[key] = self.fixtures_dir / filename
@@ -41,7 +41,7 @@ class FixtureStore:
         """Look up a fixture by its cache key."""
         path = self._index.get(cache_key)
         if path and path.exists():
-            with open(path) as f:
+            with open(path, encoding="utf-8") as f:
                 return json.load(f)
         return None
 
@@ -58,7 +58,7 @@ class FixtureStore:
         fixtures_dir = Path(fixtures_dir)
         fixtures_dir.mkdir(parents=True, exist_ok=True)
         path = fixtures_dir / f"{cache_key}.json"
-        with open(path, "w") as f:
+        with open(path, "w", encoding="utf-8") as f:
             json.dump(response, f, indent=2)
         return path
 
@@ -70,5 +70,5 @@ class FixtureStore:
         for path in sorted(fixtures_dir.glob("*.json")):
             if path.name != "index.json":
                 index[path.stem] = path.name
-        with open(fixtures_dir / "index.json", "w") as f:
+        with open(fixtures_dir / "index.json", "w", encoding="utf-8") as f:
             json.dump(index, f, indent=2)

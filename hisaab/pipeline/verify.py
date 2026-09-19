@@ -210,11 +210,20 @@ def _fuzzy_verify(quote: str, window_text: str) -> bool:
     return score >= FUZZY_THRESHOLD
 
 
+def _load_system_prompt() -> str:
+    """Load the verification system prompt from file.
+
+    See extract.py's _load_system_prompt for why encoding is explicit —
+    same bug class, same fix.
+    """
+    if VERIFY_PROMPT_PATH.exists():
+        return VERIFY_PROMPT_PATH.read_text(encoding="utf-8")
+    return ""
+
+
 def _llm_verify(tip: ExtractedTip, window_text: str) -> dict:
     """Use LLM to verify the tip against the window text."""
-    system = ""
-    if VERIFY_PROMPT_PATH.exists():
-        system = VERIFY_PROMPT_PATH.read_text()
+    system = _load_system_prompt()
 
     prompt = f"""Transcript window:
 {window_text}
