@@ -76,7 +76,7 @@ def test_llm_cache_bundle_is_not_empty():
     assert count > 0, f"{db_path} exists but has zero cached rows."
 
 
-def test_full_audit_replay_produces_tips(monkeypatch, tmp_path):
+def test_full_audit_replay_produces_tips(monkeypatch, tmp_path, caplog):
     """The real end-to-end guarantee: a full audit against the shipped demo
     bundle, with zero API keys and zero live network calls, must actually
     extract and verify tips — not just fail to crash. A broken or
@@ -88,6 +88,10 @@ def test_full_audit_replay_produces_tips(monkeypatch, tmp_path):
     and defeat the point of this test, which is to prove the *shipped*
     bundle is what a judge running with zero keys actually gets served.
     """
+    import logging
+
+    caplog.set_level(logging.INFO)
+
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("SERPAPI_API_KEY", raising=False)
     monkeypatch.delenv("HISAAB_LLM_CACHE_DB", raising=False)
