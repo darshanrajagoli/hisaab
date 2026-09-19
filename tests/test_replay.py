@@ -97,9 +97,33 @@ def test_full_audit_replay_produces_tips(monkeypatch, tmp_path, caplog):
     monkeypatch.delenv("HISAAB_LLM_CACHE_DB", raising=False)
     monkeypatch.setenv("HISAAB_MODE", "replay")
 
+    import hisaab.llm as llm_module
     from hisaab.pipeline.orchestrator import run_audit
     from hisaab.serp.cache import SerpCache
     from hisaab.serp.client import SerpClient
+
+    # Diagnostic: on a miss, report the exact cache key we computed and
+    # whether that key exists anywhere in the shipped bundle, plus how many
+    # keys the bundle actually has — narrows "wrong key computed" vs
+    # "bundle genuinely incomplete" without guessing.
+    _orig_cache_key = llm_module._llm_cache_key
+
+    def _logging_cache_key(model, system, prompt, temperature):
+        key = _orig_cache_key(model, system, prompt, temperature)
+        conn = llm_module._get_llm_cache_conn()
+        exists = conn.execute(
+            "SELECT 1 FROM llm_cache WHERE cache_key = ?", (key,)
+        ).fetchone()
+        total = conn.execute("SELECT COUNT(*) FROM llm_cache").fetchone()[0]
+        if not exists:
+            print(
+                f"CACHE MISS key={key} model={model!r} total_bundle_rows={total} "
+                f"prompt_len={len(prompt)} system_len={len(system)} "
+                f"prompt_head={prompt[:120]!r}"
+            )
+        return key
+
+    monkeypatch.setattr(llm_module, "_llm_cache_key", _logging_cache_key)
 
     # Isolate the SerpApi budget-tracking DB from the developer's real
     # local hisaab_cache.db — replay mode itself reads fixtures, not this,
