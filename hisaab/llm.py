@@ -16,6 +16,7 @@ import time
 from pathlib import Path
 from typing import Any, Optional
 
+import httpx
 from google import genai
 from google.genai import errors as genai_errors
 from google.genai import types
@@ -110,6 +111,13 @@ DEFAULT_MODEL = "gemini-3.1-flash-lite"
 
 _MAX_RETRIES = 3
 
+# The free tier also caps requests per MINUTE (15 for flash-lite). An audit
+# fires dozens of extraction/verification calls back to back, so without
+# pacing it bursts past that cap and windows start failing with 429s.
+_MIN_CALL_INTERVAL_S = 60 / 14
+_RATE_LIMIT_BACKOFF_S = 30
+_last_call_at = 0.0
+
 _client: Optional[genai.Client] = None
 
 
@@ -158,8 +166,13 @@ def call_llm(
         system_instruction=system or None,
     )
 
+    global _last_call_at
     last_error: Optional[Exception] = None
     for attempt in range(_MAX_RETRIES):
+        wait = _MIN_CALL_INTERVAL_S - (time.monotonic() - _last_call_at)
+        if wait > 0:
+            time.sleep(wait)
+        _last_call_at = time.monotonic()
         try:
             response = client.models.generate_content(
                 model=model,
@@ -168,11 +181,21 @@ def call_llm(
             )
             _llm_cache_put(cache_key, response.text)
             return response.text
-        except genai_errors.ServerError as e:
-            # Transient overload (503) — worth a short backoff and retry.
+        except (genai_errors.ServerError, httpx.TransportError) as e:
+            # Transient overload (503) or a dropped connection ("Server
+            # disconnected without sending a response") — back off and retry.
             last_error = e
             if attempt < _MAX_RETRIES - 1:
                 time.sleep(2**attempt)
+        except genai_errors.ClientError as e:
+            # 429 is usually the per-minute cap and clears within a minute;
+            # if it's the daily cap, the retries fail too and it surfaces.
+            if e.code != 429:
+                raise
+            last_error = e
+            if attempt < _MAX_RETRIES - 1:
+                logger.warning(f"Gemini rate limit hit, retrying in {_RATE_LIMIT_BACKOFF_S}s")
+                time.sleep(_RATE_LIMIT_BACKOFF_S)
     raise last_error
 
 

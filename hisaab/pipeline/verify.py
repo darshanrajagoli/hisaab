@@ -124,16 +124,20 @@ def _renormalize_enums(tip_dict: dict) -> None:
     )
 
 
-def merge_duplicates(tips: list[VerifiedTip]) -> list[VerifiedTip]:
+def merge_duplicates(tips: list[VerifiedTip], by_ticker: bool = False) -> list[VerifiedTip]:
     """
     Merge duplicate mentions of the same stock within a video.
 
-    Keeps the earliest timestamp and merges fields.
+    Keeps the earliest timestamp and merges fields. Before resolution only
+    the spoken name is available ("Reliance" vs "Reliance Industries" look
+    different); run again with by_ticker=True after resolution to catch
+    those, so one call repeated in a video isn't scored twice.
     """
-    # Group by (video_id, company_name_raw normalized)
     groups: dict[tuple[str, str], list[VerifiedTip]] = {}
     for tip in tips:
-        key = (tip.video_id, tip.company_name_raw.lower().strip())
+        ticker = getattr(tip, "ticker_nse", None) if by_ticker else None
+        name = ticker or tip.company_name_raw.lower().strip()
+        key = (tip.video_id, name, tip.direction.value)
         groups.setdefault(key, []).append(tip)
 
     merged: list[VerifiedTip] = []

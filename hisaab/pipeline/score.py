@@ -17,6 +17,7 @@ from typing import Optional
 
 import pandas as pd
 
+from hisaab import clock
 from hisaab.models import (
     HORIZON_DEFAULTS_TRADING_DAYS,
     Direction,
@@ -46,7 +47,7 @@ def score_tips(
     Returns ScoredTip objects with outcomes and returns.
     """
     if today is None:
-        today = date.today()
+        today = clock.today()
 
     nifty_series = price_data.get(NIFTY_TICKER)
     scored: list[ScoredTip] = []

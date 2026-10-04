@@ -11,6 +11,7 @@ import re
 from datetime import date, datetime
 from typing import Optional
 
+from hisaab import clock
 from hisaab.models import VideoInfo
 from hisaab.serp.client import SerpClient
 
@@ -102,7 +103,7 @@ def _extract_publish_date(info: dict) -> Optional[date]:
 
 
 _DATE_PREFIX_RE = re.compile(
-    r"^(premiered|streamed live on|scheduled for|live)\s+", re.IGNORECASE
+    r"^(premiered|streamed live on|streamed|scheduled for|live)\s+", re.IGNORECASE
 )
 
 
@@ -117,7 +118,7 @@ def _parse_date_str(date_str: str) -> Optional[date]:
         unit = relative_match.group(2).lower()
         from datetime import timedelta
 
-        today = date.today()
+        today = clock.today()
         if unit == "day":
             return today - timedelta(days=num)
         elif unit == "week":

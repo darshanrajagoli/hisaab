@@ -75,6 +75,7 @@ if page == "🏠 Home":
     with col1:
         user_input = st.text_input(
             "YouTube Channel or Video URL",
+            value="@RakeshBansal",
             placeholder="@channel_handle or https://youtube.com/watch?v=...",
             help="Paste a channel URL, handle, channel ID, or video URL",
         )
@@ -83,7 +84,15 @@ if page == "🏠 Home":
         with col_a:
             max_videos = st.slider("Max videos to audit", 3, 20, 10)
         with col_b:
-            mode = st.radio("Mode", ["Live", "Replay (demo)"], horizontal=True)
+            # Replay is the default so a first visit always works in one
+            # click: a live run depends on free-tier API quota that may be
+            # spent at the moment someone tries it.
+            mode = st.radio("Mode", ["Replay (demo)", "Live"], horizontal=True)
+        if "Replay" in mode:
+            st.caption(
+                "Replay re-runs a real recorded audit of @RakeshBansal (10 videos) "
+                "with zero API calls. Switch to **Live** to audit any channel."
+            )
 
     with col2:
         st.markdown("### 💰 API Budget")
@@ -563,6 +572,12 @@ elif page == "📐 Methodology":
 
     Every number on this scorecard is computed by deterministic Python code, not an LLM.
     The LLM's only job is reading transcripts and extracting structured data.
+
+    ### Video Selection
+    Each audit has a fixed video budget. Likely-tip videos (by title) come first, and
+    among them, **videos at least 90 days old** — a positional call needs ~60 trading
+    days to play out, so last week's video mostly yields tips that can't be graded yet.
+    Multi-stock list videos ("Top 5 …") rank ahead of single-stock ones.
 
     ### Entry Rule
     The entry price is the closing price on the **first trading day strictly after** the

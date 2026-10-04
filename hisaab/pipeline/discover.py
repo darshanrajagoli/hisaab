@@ -19,6 +19,7 @@ from typing import Optional
 from urllib.parse import parse_qs, urlparse
 
 from hisaab.models import ChannelInfo, VideoInfo
+from hisaab.pipeline.metadata import _parse_date_str
 from hisaab.serp.client import SerpClient
 
 logger = logging.getLogger(__name__)
@@ -118,6 +119,10 @@ def discover_videos(
                         view_count=_parse_views(
                             entry.get("extracted_views", entry.get("views"))
                         ),
+                        # Only approximate ("8 months ago") — the metadata
+                        # step replaces it with the exact date. Good enough
+                        # for selection to tell old videos from new ones.
+                        publish_date=_parse_date_str(entry.get("published_date", "")),
                     )
                 )
 

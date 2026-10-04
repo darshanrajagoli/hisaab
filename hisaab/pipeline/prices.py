@@ -14,6 +14,7 @@ from typing import Optional
 
 import pandas as pd
 
+from hisaab import clock
 from hisaab.models import ResolvedTip
 from hisaab.serp.client import SerpClient
 
@@ -66,13 +67,13 @@ def _choose_window(tips: list[ResolvedTip], ticker: str) -> str:
         if not dates:
             return "1Y"
         oldest = min(dates)
-        days_ago = (date.today() - oldest).days
+        days_ago = (clock.today() - oldest).days
     else:
         relevant = [t for t in tips if t.ticker_nse == ticker and t.publish_date]
         if not relevant:
             return "1Y"
         oldest_date = min(t.publish_date for t in relevant)
-        days_ago = (date.today() - oldest_date).days
+        days_ago = (clock.today() - oldest_date).days
 
     if days_ago <= 30:
         return "1M"

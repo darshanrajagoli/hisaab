@@ -17,6 +17,7 @@ import json
 import shutil
 import sqlite3
 import sys
+from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
@@ -70,8 +71,17 @@ def export(bundle_name: str = "demo") -> None:
 
     serp_count = export_serp(out_dir)
     llm_count = export_llm(out_dir)
+    # Replay pins "today" to this date (see hisaab/clock.py), so the bundle
+    # keeps reproducing the same audit no matter when it's replayed.
+    as_of = date.today().isoformat()
+    (out_dir / "bundle.json").write_text(
+        json.dumps({"as_of": as_of}, indent=2) + "\n", encoding="utf-8"
+    )
 
-    print(f"Exported {serp_count} SerpApi fixtures and {llm_count} LLM responses to {out_dir}")
+    print(
+        f"Exported {serp_count} SerpApi fixtures and {llm_count} LLM responses "
+        f"(as of {as_of}) to {out_dir}"
+    )
 
 
 if __name__ == "__main__":

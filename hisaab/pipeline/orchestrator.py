@@ -168,6 +168,7 @@ def run_audit(
     progress("resolve", "Resolving ticker symbols...", {})
     resolver = TickerResolver()
     resolved = resolve_tips(verified, resolver)
+    resolved = merge_duplicates(resolved, by_ticker=True)
     funnel.tips_resolved = sum(1 for t in resolved if t.resolved)
     funnel.tips_dropped_resolution = len(resolved) - funnel.tips_resolved
     progress(

@@ -207,6 +207,16 @@ Typical audit: **~35 searches** per channel. Free plan (250/month) supports ~7 f
 
 ## Scoring Methodology
 
+### Video Selection
+Each audit has a fixed video budget (default 10). Videos are discovered by
+searching within the channel for tip keywords, titles are classified by the
+LLM, and likely-tip videos are preferred. Among those, **videos at least 90
+days old come first**: a positional call needs ~60 trading days to play out,
+so auditing last week's video mostly produces tips that can't be graded yet
+(`OPEN`). Multi-stock list videos ("Top 5 Solar Stocks") rank ahead of
+single-stock Shorts, since every video costs the same two SerpApi calls.
+Recent videos still fill any remaining budget.
+
 ### Entry Rule
 The entry price is the closing price on the **first trading day strictly after** the video's publish date. This avoids using information the viewer couldn't have had.
 
@@ -281,12 +291,10 @@ Only closing prices are used — intraday touches not counted.
   for the same run), because the index's window is chosen from the oldest
   tip across the whole run rather than per-tip — excess return can
   therefore compare a daily-bar stock move against a weekly-bar index move
-- The demo fixture bundle in `fixtures/demo/` is dated: Google Finance's
-  window parameter (1M/6M/1Y/5Y) is chosen from how old a tip is *relative
-  to today*, so as real time passes, previously-cached fixtures fall out
-  of their original window and a fresh replay run can start missing
-  fixtures it used to hit — the bundle isn't permanently reproducible,
-  it needs periodic re-export
+- The demo fixture bundle in `fixtures/demo/` is a snapshot: replay mode
+  pins "today" to the bundle's recording date (`fixtures/demo/bundle.json`)
+  so it reproduces the recorded audit exactly, forever — which also means
+  it shows the scorecard *as of that date*, not as of whenever you run it
 - A creator saying "I bought X" is treated as a scoreable LONG tip but
   flagged `PERSONAL_POSITION` — it's disclosure of a personal holding, not
   advice given to viewers, and the two are graded identically here. A tip
@@ -340,6 +348,7 @@ Tests cover the most critical components:
 - **Statistics**: Wilson CI, bootstrap CI, binomial test edge cases
 - **Cache**: Key canonicalization, TTL behavior
 - **Windows**: Building, keyword filtering
+- **Replay clock & selection**: replay pins "today" to the bundle date; gradeable videos are selected first
 - **Resolver**: Alias matching, fuzzy matching
 
 CI runs on every push via GitHub Actions **in replay mode** — no API keys needed.

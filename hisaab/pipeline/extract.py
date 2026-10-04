@@ -154,11 +154,16 @@ Extract all actionable stock tips. Return a JSON array."""
                 item.get("horizon_bucket"), _HORIZON_SYNONYMS, "UNSPECIFIED"
             )
             item["extractor_confidence"] = _normalize_confidence(item.get("extractor_confidence"))
+            # The English gloss is display-only; the LLM sometimes omits it
+            # for quotes that are already English. Losing the whole tip over
+            # a missing caption would be the wrong trade.
+            if not item.get("quote_english"):
+                item["quote_english"] = item.get("quote_original", "")
 
             tip = ExtractedTip(**item)
             tips.append(tip)
         except Exception as e:
-            logger.debug(f"Failed to parse extracted tip: {e}")
+            logger.warning(f"Dropped malformed extracted tip in {window.video_id}: {e}")
             continue
 
     return tips
