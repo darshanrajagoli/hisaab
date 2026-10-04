@@ -20,6 +20,7 @@ import numpy as np
 from scipy import stats as sp_stats
 
 from hisaab.models import ChannelStats, ScoredTip, TipOutcome
+from hisaab.pipeline.score import _live_levels
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +99,8 @@ def compute_stats(
         t
         for t in scored
         if t.outcome in (TipOutcome.TARGET_HIT, TipOutcome.STOP_HIT, TipOutcome.EXPIRED)
-        and t.stated_target is not None
+        and t.entry_price is not None
+        and _live_levels(t, t.entry_price)[0]
     ]
     if with_targets:
         target_hits = sum(1 for t in with_targets if t.outcome == TipOutcome.TARGET_HIT)

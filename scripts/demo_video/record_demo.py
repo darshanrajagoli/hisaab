@@ -1,13 +1,12 @@
 """Record the Hisaab demo video by driving the local Streamlit app (replay mode)."""
 
+import json
 import sys
 import time
 from pathlib import Path
 
-from playwright.sync_api import sync_playwright
-
-import json
 from narration import LINES
+from playwright.sync_api import sync_playwright
 
 DUR = json.loads((Path(__file__).parent / "voice" / "durations.json").read_text())
 GAP = 0.45

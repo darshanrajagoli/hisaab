@@ -33,3 +33,8 @@ Thumbs.db
 venv/
 .venv/
 env/
+
+# Demo video build outputs
+scripts/demo_video/voice/
+scripts/demo_video/video_raw/
+scripts/demo_video/*.mp4

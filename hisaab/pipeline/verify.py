@@ -137,7 +137,11 @@ def merge_duplicates(tips: list[VerifiedTip], by_ticker: bool = False) -> list[V
     for tip in tips:
         ticker = getattr(tip, "ticker_nse", None) if by_ticker else None
         name = ticker or tip.company_name_raw.lower().strip()
-        key = (tip.video_id, name, tip.direction.value)
+        # LONG/HOLD/WATCHLIST are all graded as a long position, so "buy it"
+        # then "keep holding it" is one bullish call, not two. Opposite
+        # views on the same stock stay separate.
+        bearish = tip.direction.value in ("SHORT", "AVOID")
+        key = (tip.video_id, name, bearish)
         groups.setdefault(key, []).append(tip)
 
     merged: list[VerifiedTip] = []

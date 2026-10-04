@@ -61,3 +61,22 @@ def test_selection_still_fills_budget_with_recent_videos(monkeypatch):
     videos = [_video("new1", 5), _video("old1", 200), _video("new2", 6)]
     selected = select_videos(videos, max_videos=3, use_llm=False)
     assert [v.video_id for v in selected] == ["old1", "new1", "new2"]
+
+
+def test_same_stock_bullish_calls_in_one_video_merge(monkeypatch):
+    """'Buy Kotak' then 'keep holding Kotak' is one bullish call, not two."""
+    from hisaab.models import Direction, ResolvedTip
+    from hisaab.pipeline.verify import merge_duplicates
+
+    def tip(direction, start_ms, name="Kotak Bank"):
+        return ResolvedTip(
+            video_id="v", start_ms=start_ms, end_ms=start_ms + 1000,
+            quote_original="q", quote_english="q", company_name_raw=name,
+            direction=direction, ticker_nse="KOTAKBANK:NSE", resolved=True,
+        )
+
+    merged = merge_duplicates(
+        [tip(Direction.LONG, 0), tip(Direction.HOLD, 5000, "Kotak"), tip(Direction.SHORT, 9000)],
+        by_ticker=True,
+    )
+    assert sorted(t.direction.value for t in merged) == ["LONG", "SHORT"]

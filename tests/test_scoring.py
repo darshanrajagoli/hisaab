@@ -233,3 +233,31 @@ class TestOpenTip:
         )
 
         assert scored[0].outcome == TipOutcome.OPEN
+
+
+class TestStaleLevels:
+    """A level the stock had already passed at entry isn't a prediction."""
+
+    def test_target_already_passed_is_not_an_instant_hit(self):
+        pub = date(2024, 1, 1)
+        # Entry close ~102; a LONG "target 95" was already met before anyone could act.
+        series = _make_series(100, [0.02] + [0.0] * 80, start=pub)
+        nifty = _make_flat_series(20000, pub)
+
+        tip = _make_tip(pub, Direction.LONG, target=95)
+        scored = score_tips([tip], {"TESTCORP:NSE": series, "NIFTY_50:INDEXNSE": nifty})
+
+        assert scored[0].outcome == TipOutcome.EXPIRED
+        assert scored[0].is_scored is True
+        assert "already passed" in (scored[0].verification_notes or "")
+
+    def test_live_target_still_graded(self):
+        pub = date(2024, 1, 1)
+        series = _make_series(100, [0.02] * 15 + [0.01] * 50, start=pub)
+        nifty = _make_flat_series(20000, pub)
+
+        tip = _make_tip(pub, Direction.LONG, target=115)
+        scored = score_tips([tip], {"TESTCORP:NSE": series, "NIFTY_50:INDEXNSE": nifty})
+
+        assert scored[0].outcome == TipOutcome.TARGET_HIT
+        assert not scored[0].verification_notes

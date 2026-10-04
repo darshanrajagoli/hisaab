@@ -131,8 +131,25 @@ def score_tips(
             continue
 
         # Score by creator's terms (target/stop)
+        use_target, use_stop = _live_levels(tip, entry_price)
+        stale = [
+            label
+            for label, stated, used in (
+                ("target", tip.stated_target, use_target),
+                ("stop-loss", tip.stated_stop_loss, use_stop),
+            )
+            if stated is not None and not used
+        ]
+        if stale:
+            note = (
+                f"Stated {' and '.join(stale)} already passed at entry "
+                f"(₹{entry_price:,.2f}) — ignored; graded on market terms"
+            )
+            stip.verification_notes = (
+                f"{stip.verification_notes}; {note}" if stip.verification_notes else note
+            )
         outcome, exit_date, exit_price = _score_creator_terms(
-            series, entry_date, entry_price, horizon_end, tip
+            series, entry_date, entry_price, horizon_end, tip, use_target, use_stop
         )
         stip.outcome = outcome
         stip.exit_date = exit_date
@@ -235,12 +252,30 @@ def _check_entry_triggered(
         return float(window["close"].max()) >= stated_entry * 0.98
 
 
+def _live_levels(tip: ResolvedTip, entry_price: float) -> tuple[bool, bool]:
+    """
+    Which stated levels are still ahead of the stock at entry.
+
+    A long call's target at or below the entry close (or its stop at or above
+    it) was already passed before a viewer could act — typically a level
+    quoted from an older call, or a misread number. Grading it would book an
+    instant TARGET_HIT at 0% return, so such levels are ignored.
+    """
+    bullish = tip.direction not in (Direction.SHORT, Direction.AVOID)
+    target, stop = tip.stated_target, tip.stated_stop_loss
+    use_target = target is not None and (target > entry_price if bullish else target < entry_price)
+    use_stop = stop is not None and (stop < entry_price if bullish else stop > entry_price)
+    return use_target, use_stop
+
+
 def _score_creator_terms(
     series: pd.DataFrame,
     entry_date: date,
     entry_price: float,
     horizon_end: date,
     tip: ResolvedTip,
+    has_target: bool,
+    has_stop: bool,
 ) -> tuple[TipOutcome, date, float]:
     """
     Walk the close series from entry to horizon.
@@ -249,9 +284,6 @@ def _score_creator_terms(
     window = get_series_between(series, entry_date, horizon_end)
     if window.empty:
         return TipOutcome.EXPIRED, horizon_end, entry_price
-
-    has_target = tip.stated_target is not None
-    has_stop = tip.stated_stop_loss is not None
 
     # If no target or stop, score by excess return at horizon
     if not has_target and not has_stop:
