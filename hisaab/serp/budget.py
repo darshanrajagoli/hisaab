@@ -39,7 +39,7 @@ class BudgetGovernor:
     - monthly_cap: soft cap on total monthly calls
     """
 
-    run_cap: int = field(default_factory=lambda: int(os.getenv("HISAAB_RUN_CAP", "50")))
+    run_cap: int = field(default_factory=lambda: int(os.getenv("HISAAB_RUN_CAP", "100")))
     monthly_cap: int = field(default_factory=lambda: int(os.getenv("HISAAB_MONTHLY_CAP", "240")))
     monthly_used: int = 0
     run_used: int = 0

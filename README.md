@@ -63,7 +63,7 @@ pip install -e .
 # CLI
 hisaab audit @RakeshBansal --replay demo
 
-# Web UI — pick "Replay" mode in the sidebar, then Run Audit
+# Web UI — Replay (demo) is the default mode on Home: just click Run Audit
 streamlit run app/app.py
 ```
 
@@ -138,7 +138,9 @@ Every field mapping above was verified against real, live SerpApi responses duri
 - **Replay mode** — `HISAAB_MODE=replay` reads from a fixture bundle with zero network calls
 - SerpApi's own 1-hour cache is respected (`no_cache` is never used)
 
-Typical audit: **~35 searches** per channel. Free plan (250/month) supports ~7 full audits.
+A 10-video audit costs roughly **30–80 searches**: 2 for discovery, 2 per video, and one
+Google Finance call per distinct stock (the bundled demo audit: 77, since list videos name
+many stocks). The free plan (250/month) covers ~3–7 audits; replay runs cost nothing.
 
 ---
 
@@ -379,7 +381,11 @@ pytest tests/ -v
 
 ## AI Tools Used
 
-This project was built with assistance from **Claude** (Anthropic). AI tools were used for code generation, architecture planning, and documentation. All code was reviewed and the scoring logic is deterministic and auditable.
+This project was built with assistance from **Claude** (Anthropic, via Claude Code): code
+generation, architecture, debugging, tests, documentation, and the demo video (a scripted
+browser recording with captions and text-to-speech narration — see `scripts/demo_video/`).
+Inside the product, **Google Gemini** classifies video titles, extracts tips from transcripts,
+and cross-checks quotes. All scoring and statistics are deterministic, auditable Python.
 
 ## Hackathon
 
