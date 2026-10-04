@@ -229,21 +229,27 @@ elif page == "📊 Scorecard":
                 f"{stats.hit_rate_market_ci_high:.1%}]"
             )
             st.metric("Hit Rate (vs NIFTY)", f"{stats.hit_rate_market:.1%}", help=ci_help)
+            # The interval is the point — show it, don't bury it in a tooltip.
+            st.caption(ci_help)
     with col3:
         if stats.mean_excess_return is not None:
-            st.metric(
-                "Mean Excess Return",
-                f"{stats.mean_excess_return:+.2%}",
-                help=f"95% CI: [{stats.mean_excess_ci_low:+.2%}, {stats.mean_excess_ci_high:+.2%}]",
+            excess_ci = (
+                f"95% CI: [{stats.mean_excess_ci_low:+.2%}, {stats.mean_excess_ci_high:+.2%}]"
             )
+            st.metric("Mean Excess Return", f"{stats.mean_excess_return:+.2%}", help=excess_ci)
+            st.caption(excess_ci)
     with col4:
         if stats.binomial_verdict:
-            short = (
-                stats.binomial_verdict
-                if len(stats.binomial_verdict) <= 30
-                else stats.binomial_verdict[:27] + "..."
-            )
-            st.metric("Statistical Verdict", short, help=stats.binomial_verdict)
+            verdict = stats.binomial_verdict
+            if verdict.startswith("Indistinguishable"):
+                short = "≈ Coin flip"
+            elif "better" in verdict:
+                short = "Beats coin flip"
+            else:
+                short = "Worse than coin flip"
+            st.metric("Statistical Verdict", short, help=verdict)
+            p = stats.binomial_p_value
+            st.caption(f"{verdict}" + (f" · p = {p:.2f}" if p is not None and p >= 0.01 else ""))
 
     st.divider()
 

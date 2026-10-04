@@ -1,6 +1,7 @@
 """Record the Hisaab demo video by driving the local Streamlit app (replay mode)."""
 
 import json
+import re
 import sys
 import time
 from pathlib import Path
@@ -40,6 +41,11 @@ OVERLAY_JS = """
   document.head.appendChild(style);
   const cap = document.createElement('div'); cap.id = 'hz-cap'; document.body.appendChild(cap);
   const card = document.createElement('div'); card.id = 'hz-card'; document.body.appendChild(card);
+  // Sync marker: flips color at each narration cue so the muxer can find
+  // cues in the actual frames (the recording drops frames under load).
+  const mk = document.createElement('div'); mk.id = 'hz-mk';
+  mk.style.cssText = 'position:fixed;left:0;top:0;width:12px;height:12px;z-index:1000001;background:#000';
+  document.body.appendChild(mk);
 }
 """
 
@@ -77,10 +83,28 @@ def nav(page, label):
     page.wait_for_timeout(2500)
 
 
+def pick_tip(page, prefix):
+    """Choose a tip in the Tip Detail combobox by its label prefix."""
+    try:
+        box = page.get_by_role("combobox", name="Select tip")
+        box.click(timeout=5000)
+        # The option list is virtualized; typing filters it so the target renders.
+        box.fill(prefix)
+        page.wait_for_timeout(600)
+        page.get_by_role("option", name=re.compile("^" + re.escape(prefix))).first.click(timeout=5000)
+        page.wait_for_timeout(2500)
+    except Exception as exc:  # selector drift shouldn't kill the take
+        print("tip pick skipped:", prefix, exc)
+        page.keyboard.press("Escape")
+
+
 def smooth_scroll(page, total, steps=40, pause=60):
     for _ in range(steps):
         page.mouse.wheel(0, total / steps)
         page.wait_for_timeout(pause)
+
+
+MARKER_COLORS = ["#FF0000", "#00FF00", "#0000FF"]
 
 
 class Timeline:
@@ -93,12 +117,20 @@ class Timeline:
     def now(self):
         return time.time() - self.t0
 
+    def _flip(self):
+        color = MARKER_COLORS[len(self.events) % len(MARKER_COLORS)]
+        self.page.evaluate(OVERLAY_JS)
+        self.page.evaluate("(c) => { document.getElementById('hz-mk').style.background = c; }", color)
+
     def mark(self, name):
+        if name != "start":  # same instant as the first cue; derived from it
+            self._flip()
         self.events.append({"key": name, "t": self.now()})
 
     def say(self, key, block=True, show_caption=True):
         """Start narration line `key` now; caption it; optionally wait until it ends."""
         self.wait()
+        self._flip()
         self.events.append({"key": key, "t": self.now()})
         if show_caption:
             caption(self.page, LINES[key])
@@ -168,20 +200,15 @@ def main():
 
         caption(page, None)
         nav(page, "🔍 Tip Detail")
+        pick_tip(page, "BEL —")
         page.mouse.move(W - 50, H - 50)
         tl.say("tip1")
         tl.say("tip2", block=False)
         smooth_scroll(page, 750)
         tl.wait()
         smooth_scroll(page, -1500, steps=15, pause=30)
-        try:
-            page.locator('div[data-baseweb="select"]').last.click()
-            page.wait_for_timeout(500)
-            page.keyboard.press("ArrowDown")
-            page.keyboard.press("ArrowDown")
-            page.keyboard.press("Enter")
-        except Exception as e:  # selector drift shouldn't kill the take
-            print("tip switch skipped:", e)
+        pick_tip(page, "HINDCOPPER —")
+        page.mouse.move(W - 50, H - 50)
         tl.say("tip3", block=False)
         page.wait_for_timeout(2500)
         smooth_scroll(page, 750, steps=30)
@@ -206,6 +233,7 @@ def main():
         tl.say("end", show_caption=False)
         page.wait_for_timeout(1500)
         tl.mark("stop")
+        page.wait_for_timeout(600)  # let the stop marker reach a recorded frame
 
         video_path = page.video.path()
         ctx.close()

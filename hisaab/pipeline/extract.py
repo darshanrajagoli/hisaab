@@ -109,7 +109,7 @@ Extract all actionable stock tips. Return a JSON array."""
         raise
     except Exception as e:
         logger.warning(f"Extraction failed for {window.video_id}@{window.start_ms}: {e}")
-        return []
+        raise ExtractionCallFailed(str(e)) from e
 
     if not isinstance(raw, list):
         raw = [raw] if isinstance(raw, dict) else []
@@ -169,21 +169,43 @@ Extract all actionable stock tips. Return a JSON array."""
     return tips
 
 
+class ExtractionCallFailed(Exception):
+    """The LLM call for one window failed (quota, network, ...)."""
+
+
 def extract_tips_from_windows(
     windows: list[TranscriptWindow],
 ) -> list[ExtractedTip]:
     """Extract tips from all keyword-matching windows."""
     all_tips: list[ExtractedTip] = []
+    attempted = failed = 0
+    last_error = ""
 
     for window in windows:
         if not window.has_tip_keywords:
             continue
-        tips = extract_tips_from_window(window)
+        attempted += 1
+        try:
+            tips = extract_tips_from_window(window)
+        except ExtractionCallFailed as e:
+            failed += 1
+            last_error = str(e)
+            continue
         all_tips.extend(tips)
         if tips:
             logger.info(
                 f"  Extracted {len(tips)} tips from {window.video_id}@{window.start_ms // 1000}s"
             )
+
+    # One flaky window is noise; every window failing means the LLM is
+    # unreachable (e.g. daily quota spent). Reporting that as a clean
+    # "audit complete, 0 tips" is how a broken run looked like a result.
+    if attempted and failed == attempted:
+        raise RuntimeError(
+            f"All {attempted} tip-extraction LLM calls failed — last error: {last_error}"
+        )
+    if failed:
+        logger.warning(f"{failed}/{attempted} extraction calls failed; their tips are missing")
 
     logger.info(f"Total extracted: {len(all_tips)} tips from {len(windows)} windows")
     return all_tips

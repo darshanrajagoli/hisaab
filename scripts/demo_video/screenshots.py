@@ -18,7 +18,7 @@ with sync_playwright() as p:
     page.get_by_text("Audit complete!").first.wait_for(timeout=180000)
 
     page.get_by_text("📊 Scorecard", exact=True).first.click()
-    page.wait_for_timeout(3500)
+    page.wait_for_timeout(7000)
     page.screenshot(path=str(OUT / "scorecard.png"))
 
     page.get_by_text("🔍 Tip Detail", exact=True).first.click()

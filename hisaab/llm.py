@@ -12,6 +12,7 @@ import json
 import logging
 import os
 import sqlite3
+import threading
 import time
 from pathlib import Path
 from typing import Any, Optional
@@ -61,23 +62,27 @@ def _llm_cache_path() -> Path:
     return Path("hisaab_llm_cache.db")
 
 
-_llm_cache_conn: Optional[sqlite3.Connection] = None
-_llm_cache_conn_path: Optional[Path] = None
+# One connection per thread: sqlite3 connections can't cross threads, and
+# Streamlit runs every session (and rerun) on its own script thread. A single
+# module-level connection worked for the first audit on a server and made
+# every later one fail each cache lookup — silently, as "0 tips".
+_llm_cache_local = threading.local()
 
 
 def _get_llm_cache_conn() -> sqlite3.Connection:
-    global _llm_cache_conn, _llm_cache_conn_path
     path = _llm_cache_path()
-    if _llm_cache_conn is None or _llm_cache_conn_path != path:
-        _llm_cache_conn = sqlite3.connect(str(path))
-        _llm_cache_conn.execute("PRAGMA journal_mode=WAL")
-        _llm_cache_conn.execute(
+    conn = getattr(_llm_cache_local, "conn", None)
+    if conn is None or getattr(_llm_cache_local, "path", None) != path:
+        conn = sqlite3.connect(str(path))
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute(
             "CREATE TABLE IF NOT EXISTS llm_cache ("
             "cache_key TEXT PRIMARY KEY, response TEXT NOT NULL)"
         )
-        _llm_cache_conn.commit()
-        _llm_cache_conn_path = path
-    return _llm_cache_conn
+        conn.commit()
+        _llm_cache_local.conn = conn
+        _llm_cache_local.path = path
+    return conn
 
 
 def _llm_cache_key(model: str, system: str, prompt: str, temperature: float) -> str:

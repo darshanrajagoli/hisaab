@@ -11,6 +11,14 @@
 
 Every stock tip on YouTube is a timestamped prediction. Hisaab finds each tip in a creator's videos, records the exact second it was said, and grades it against what the stock actually did afterwards — compared to the NIFTY 50. The output is a verifiable scorecard.
 
+**Example (the bundled replay):** 10 videos from @RakeshBansal → 105 calls extracted → 42 gradeable.
+42.9% beat the NIFTY 50 over their horizon (95% CI 29–58%) — statistically indistinguishable
+from a coin flip (p = 0.44). Every one of the 42 links to the second it was said.
+
+| Scorecard | Every tip has a receipt |
+|---|---|
+| ![Scorecard](docs/scorecard.png) | ![Tip detail](docs/tip_detail.png) |
+
 ---
 
 ## The Problem
