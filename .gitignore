@@ -38,3 +38,6 @@ env/
 scripts/demo_video/voice/
 scripts/demo_video/video_raw/
 scripts/demo_video/*.mp4
+
+# Hackathon submission material (videos, form answers with personal details) — kept local
+submission/
